@@ -1,4 +1,4 @@
-// MochiMixer.cs — DJ Mochi 音訊裝置管理
+// DJMochi.cs — DJ Mochi 音訊裝置管理
 // 音訊裝置管理：顯示/隱藏（= Windows 設定「允許 / 不允許」）、設為預設、音量 / 靜音、重新命名。
 // 以 Windows 內建的 .NET Framework 4.8 編譯（C# 5 語法），不需要安裝任何東西。建置：執行 build.ps1
 
@@ -22,7 +22,7 @@ using System.Windows.Shell;
 using System.Windows.Threading;
 using Microsoft.Win32;
 
-namespace MochiMixer
+namespace DJMochi
 {
     // ===================== COM 介面 =====================
 
@@ -277,7 +277,7 @@ namespace MochiMixer
         {
             try
             {
-                var s = typeof(MainWindow).Assembly.GetManifestResourceStream("MochiMixer.mochi.png");
+                var s = typeof(MainWindow).Assembly.GetManifestResourceStream("DJMochi.mochi.png");
                 if (s == null) return null;
                 var bi = new BitmapImage();
                 bi.BeginInit(); bi.StreamSource = s; bi.CacheOption = BitmapCacheOption.OnLoad; bi.EndInit();
@@ -315,7 +315,7 @@ namespace MochiMixer
             namesFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "original-names.json");
             orig = LoadNames();
 
-            Title = "Mochi Mixer";
+            Title = "DJ Mochi";
             Width = 1040; Height = 760; MinWidth = 760; MinHeight = 420;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Background = B("#0E1014"); Foreground = Brushes.White; FontFamily = TextFont;
@@ -409,7 +409,7 @@ namespace MochiMixer
 
             var brand = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(16, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             brand.Children.Add(Logo(20, "#107C10"));
-            var bt = T("Mochi Mixer", 13, "#9AA0A8", true); bt.Margin = new Thickness(10, 0, 0, 0);
+            var bt = T("DJ Mochi", 13, "#9AA0A8", true); bt.Margin = new Thickness(10, 0, 0, 0);
             brand.Children.Add(bt);
             bar.Children.Add(brand);
 
@@ -437,7 +437,7 @@ namespace MochiMixer
 
             var header = new StackPanel { Orientation = Orientation.Horizontal };
             header.Children.Add(Logo(48, "#107C10"));
-            var ht = T("Mochi Mixer", 34, "#FFFFFF", true); ht.Margin = new Thickness(16, 0, 0, 0);
+            var ht = T("DJ Mochi", 34, "#FFFFFF", true); ht.Margin = new Thickness(16, 0, 0, 0);
             header.Children.Add(ht);
             main.Children.Add(header);
 
@@ -1089,7 +1089,7 @@ namespace MochiMixer
         static void Main()
         {
             bool created;
-            using (var mutex = new Mutex(true, @"Local\MochiMixer_SingleInstance", out created))
+            using (var mutex = new Mutex(true, @"Local\DJMochi_SingleInstance", out created))
             {
                 // 防多開：已經開著就把原本的視窗叫到最前面
                 if (!created)
@@ -1111,8 +1111,8 @@ namespace MochiMixer
                 app.DispatcherUnhandledException += delegate(object s, DispatcherUnhandledExceptionEventArgs e)
                 {
                     e.Handled = true;
-                    if (win != null) win.Title = "Mochi Mixer";
-                    MessageBox.Show(e.Exception.GetBaseException().Message, "Mochi Mixer - 發生錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    if (win != null) win.Title = "DJ Mochi";
+                    MessageBox.Show(e.Exception.GetBaseException().Message, "DJ Mochi - 發生錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
                 };
                 win = new MainWindow();
                 app.Run(win);

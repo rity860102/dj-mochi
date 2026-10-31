@@ -1,4 +1,4 @@
-# 🍡 Mochi Mixer
+# 🍡 DJ Mochi
 
 <img src="src/icon/mochi.png" width="96" align="right" alt="DJ Mochi">
 
@@ -9,7 +9,7 @@
 - 從點開到視窗出現約 **0.3 秒**
 - 介面採 Xbox 深色風格，標題列做成 Discord 那樣的自訂樣式
 
-![Mochi Mixer 截圖](docs/screenshot.png)
+![DJ Mochi 截圖](docs/screenshot.png)
 
 ---
 
@@ -35,7 +35,7 @@
 
 **系統需求**：Windows 10 / 11（64 位元）。Windows 內建 .NET Framework 4.8，不用另外安裝。
 
-1. 到 [Releases](../../releases) 下載 `MochiMixer.exe`，或依照下方[建置](#建置)步驟自己編譯
+1. 到 [Releases](../../releases) 下載 `DJMochi.exe`，或依照下方[建置](#建置)步驟自己編譯
 2. 直接執行，不需要安裝。建議在檔案上按右鍵 →「釘選到工作列」
 
 > 第一次執行時，Windows SmartScreen 可能會顯示「Windows 已保護您的電腦」，因為這個 exe 沒有數位簽章。點「其他資訊」→「仍要執行」即可。不放心的話，可以自己從原始碼編譯。
@@ -68,14 +68,14 @@
 
 ```
 dj-mochi\
-├─ MochiMixer.exe             主程式（編譯產生，不進 git）
+├─ DJMochi.exe             主程式（編譯產生，不進 git）
 ├─ original-names.json        原始名稱備份（第一次改名時自動建立，不進 git，請勿刪除）
 ├─ README.md
 ├─ LICENSE
 ├─ docs\
 │  └─ screenshot.png
 └─ src\
-   ├─ MochiMixer.cs           原始碼（C# 5 / WPF）
+   ├─ DJMochi.cs           原始碼（C# 5 / WPF）
    ├─ build.ps1               編譯腳本
    └─ icon\
       ├─ make-icon.ps1        圖示繪製腳本（WPF 向量繪圖）
@@ -91,7 +91,7 @@ dj-mochi\
 用 Windows 內建的 C# 編譯器（`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`）編譯，不需要 Visual Studio 或 .NET SDK。
 
 ```powershell
-# 編譯 exe（輸出到專案根目錄的 MochiMixer.exe）
+# 編譯 exe（輸出到專案根目錄的 DJMochi.exe）
 pwsh -File src\build.ps1
 
 # 修改圖示後，重新產生 ico / png，再重新編譯
@@ -99,7 +99,7 @@ pwsh -File src\icon\make-icon.ps1
 pwsh -File src\build.ps1
 ```
 
-> ⚠️ 編譯前要先關閉正在執行的 `MochiMixer.exe`，否則會因為檔案被鎖住而無法覆寫。
+> ⚠️ 編譯前要先關閉正在執行的 `DJMochi.exe`，否則會因為檔案被鎖住而無法覆寫。
 
 ### 開發注意事項
 - 內建的 `csc.exe` **只支援 C# 5 語法**，不能用 `$"..."` 字串插值、`?.`、`=>` 運算式成員、`nameof`、`out var` 等新語法
