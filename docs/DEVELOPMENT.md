@@ -8,6 +8,8 @@ dj-mochi\
 ├─ original-names.json        原始名稱備份（第一次改名時自動建立，不進 git）
 ├─ README.md                  英文說明（GitHub 首頁）
 ├─ README.zh-TW.md            繁體中文說明
+├─ TODO.md                    待辦與想法清單
+├─ CLAUDE.md                  給 AI 助理的專案規則
 ├─ LICENSE
 ├─ .github\workflows\
 │  └─ build.yml               CI / CD
