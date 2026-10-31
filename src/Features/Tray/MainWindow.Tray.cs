@@ -145,7 +145,7 @@ namespace DJMochi
             startupBtn.Content = IconLabel(GPower, Lang.Tr(on ? "startup.on" : "startup.off"), 17);
             startupBtn.Background = B(on ? "#107C10" : "#1B1E25");
             startupBtn.Foreground = B(on ? "#FFFFFF" : "#C9CDD4");
-            startupBtn.Margin = new Thickness(0, 0, 12, 0);
+            startupBtn.Margin = new Thickness(0);   // 最右邊的按鈕（原本的「重新整理」已改為自動偵測）
         }
 
         void HideToTray()

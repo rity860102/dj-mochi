@@ -73,7 +73,20 @@ namespace DJMochi
 
         // ---- 音量（快取 IAudioEndpointVolume，拖滑桿時不用每次重建）----
         static readonly Dictionary<string, IAudioEndpointVolume> vols = new Dictionary<string, IAudioEndpointVolume>();
+        static readonly Dictionary<string, VolumeCallback> volCallbacks = new Dictionary<string, VolumeCallback>();
         static IMMDeviceEnumerator enumr;
+
+        // 自己調音量時帶上這個 context，收到通知時就知道是自己改的，不用再更新畫面
+        public static readonly Guid OwnContext = new Guid("6D0C1A7E-4F2B-4B8E-9C3A-D1A5E0B7C2F4");
+
+        // 外部（Windows 音量面板、鍵盤音量鍵…）改了音量 / 靜音：裝置 ID、音量 0~1、是否靜音。在背景執行緒觸發
+        public static event Action<string, float, bool> VolumeChanged;
+
+        internal static void RaiseVolumeChanged(string id, float vol, bool muted)
+        {
+            var h = VolumeChanged;
+            if (h != null) h(id, vol, muted);
+        }
 
         static IAudioEndpointVolume Vol(string id)
         {
@@ -89,6 +102,9 @@ namespace DJMochi
                 if (d.Activate(ref iid, 23, IntPtr.Zero, out o) != 0 || o == null) return null;
                 v = (IAudioEndpointVolume)o;
                 vols[id] = v;
+                // 訂閱這個裝置的音量變化（畫面上有顯示音量的裝置才會建立，所以只訂閱看得到的）
+                var cb = new VolumeCallback(id);
+                if (v.RegisterControlChangeNotify(cb) == 0) volCallbacks[id] = cb;
                 return v;
             }
             finally { Marshal.ReleaseComObject(d); }
@@ -96,8 +112,14 @@ namespace DJMochi
 
         public static void ClearCache()
         {
-            foreach (var v in vols.Values) { try { Marshal.ReleaseComObject(v); } catch { } }
+            foreach (var kv in vols)
+            {
+                VolumeCallback cb;
+                if (volCallbacks.TryGetValue(kv.Key, out cb)) { try { kv.Value.UnregisterControlChangeNotify(cb); } catch { } }
+                try { Marshal.ReleaseComObject(kv.Value); } catch { }
+            }
             vols.Clear();
+            volCallbacks.Clear();
         }
 
         public static float GetVolume(string id)
@@ -108,7 +130,7 @@ namespace DJMochi
 
         public static int SetVolume(string id, float f)
         {
-            try { var v = Vol(id); if (v == null) return -1; Guid g = Guid.Empty; return v.SetMasterVolumeLevelScalar(Math.Max(0f, Math.Min(1f, f)), ref g); }
+            try { var v = Vol(id); if (v == null) return -1; Guid g = OwnContext; return v.SetMasterVolumeLevelScalar(Math.Max(0f, Math.Min(1f, f)), ref g); }
             catch { return -1; }
         }
 
@@ -120,7 +142,7 @@ namespace DJMochi
 
         public static int SetMute(string id, bool m)
         {
-            try { var v = Vol(id); if (v == null) return -1; Guid g = Guid.Empty; return v.SetMute(m, ref g); }
+            try { var v = Vol(id); if (v == null) return -1; Guid g = OwnContext; return v.SetMute(m, ref g); }
             catch { return -1; }
         }
 

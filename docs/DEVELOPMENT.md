@@ -26,7 +26,8 @@ dj-mochi\
 │  │  ├─ Devices\             裝置管理
 │  │  │  ├─ AudioInterop.cs   Windows 音訊 COM 介面（IPolicyConfig、IMMDevice、IAudioEndpointVolume）
 │  │  │  ├─ AudioDevices.cs   裝置清單與控制（顯示 / 隱藏、預設、改名、音量）
-│  │  │  └─ Device.cs         裝置資料
+│  │  │  ├─ Device.cs         裝置資料
+│  │  │  └─ DeviceWatcher.cs  自動偵測裝置與音量變化
 │  │  ├─ AirPods\
 │  │  │  ├─ AirPodsMonitor.cs     BLE 廣播監聽與電量解析
 │  │  │  └─ MainWindow.AirPods.cs 監聽時機、篩選與電量顯示
@@ -126,6 +127,13 @@ Release 說明依 commit 紀錄自動產生，發布後可以在 GitHub 上手�
 | 音量 / 靜音 | `IAudioEndpointVolume` |
 | 讀取預設裝置 | `IMMDeviceEnumerator::GetDefaultAudioEndpoint` |
 | 裝置清單 | 登錄檔 `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\{Render,Capture}` |
+| 偵測裝置變化 | `IMMDeviceEnumerator::RegisterEndpointNotificationCallback`（`IMMNotificationClient`） |
+| 偵測音量變化 | `IAudioEndpointVolume::RegisterControlChangeNotify`（`IAudioEndpointVolumeCallback`） |
+
+**自動更新的做法**：
+- 裝置變化（插拔、顯示 / 隱藏、預設、名稱）：插拔時 Windows 會連發多個通知，所以等 0.4 秒內沒有新通知才重新載入一次；使用者正在改名或按住滑鼠（拖曳滑桿）時延後更新。屬性變化只處理名稱相關的屬性，其他屬性有些驅動會一直送
+- 音量變化：只更新該列的滑桿、數字、靜音圖示，不重畫整個列表。DJ Mochi 自己調音量時帶上固定的 context GUID（`Audio.OwnContext`），收到通知時據此忽略自己造成的變化，避免滑桿來回跳
+- 兩種通知都在背景執行緒進來，一律用 `Dispatcher.BeginInvoke` 切回 UI 執行緒
 
 `IPolicyConfig` 是 Windows「聲音」控制台自己使用的 COM 介面（`CPolicyConfigClient`，CLSID `870AF99C-171D-4f9e-AF0D-E63DF40C2BC9`，位於 `AudioSes.dll`）。微軟沒有公開文件，但從 Windows 7 以來一直保持穩定。
 

@@ -78,12 +78,11 @@ namespace DJMochi
             // 上方按鈕
             { "tab.playback",       new[] { "播放", "Playback" } },
             { "tab.recording",      new[] { "錄音", "Recording" } },
-            { "refresh",            new[] { "重新整理", "Refresh" } },
             { "startup.on",         new[] { "開機啟動：開", "Startup: On" } },
             { "startup.off",        new[] { "開機啟動：關", "Startup: Off" } },
             { "startup.tip",        new[] { "開機時自動啟動，並直接縮在右下角", "Start with Windows, minimized to the notification area" } },
-            { "footer",             new[] { "拖曳或滾輪調整音量　　鉛筆：重新命名（Windows 也會顯示）　　F5：重新整理",
-                                            "Drag or scroll to adjust volume    Pencil: rename (also shown in Windows)    F5: refresh" } },
+            { "footer",             new[] { "拖曳或滾輪調整音量　　鉛筆：重新命名（Windows 也會顯示）　　插拔耳機、在 Windows 改設定會自動更新",
+                                            "Drag or scroll to adjust volume    Pencil: rename (also shown in Windows)    Device changes update automatically" } },
 
             // 裝置列表
             { "sec.shown",          new[] { "顯示中", "Visible" } },
