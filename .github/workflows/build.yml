@@ -1,0 +1,71 @@
+# DJ Mochi CI/CD
+# - 推送到 main / 發 PR：編譯並上傳 exe 為 Artifact（CI）
+# - 推送 v* tag：編譯、寫入版本號、建立 Release 並附上 exe 與 SHA256（CD）
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 建立 Release、上傳附件需要
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 決定版本號
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $v = $env:GITHUB_REF_NAME.TrimStart('v')
+          } else {
+            $v = "0.0.0-dev+$($env:GITHUB_SHA.Substring(0, 7))"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "版本：$v"
+
+      - name: 編譯
+        shell: pwsh
+        run: ./src/build.ps1 -Version '${{ steps.ver.outputs.version }}'
+
+      - name: 計算 SHA256
+        shell: pwsh
+        run: |
+          $h = (Get-FileHash DJMochi.exe -Algorithm SHA256).Hash
+          "$h  DJMochi.exe" | Set-Content DJMochi.exe.sha256 -Encoding ascii
+          $kb = [math]::Round((Get-Item DJMochi.exe).Length / 1KB)
+          @(
+            "### 🍡 DJMochi.exe"
+            ""
+            "| 版本 | 大小 | SHA256 |"
+            "|------|------|--------|"
+            "| ${{ steps.ver.outputs.version }} | $kb KB | ``$h`` |"
+          ) -join "`n" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: 上傳 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DJMochi-${{ steps.ver.outputs.version }}
+          path: |
+            DJMochi.exe
+            DJMochi.exe.sha256
+
+      - name: 建立 / 更新 Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --title "🍡 DJ Mochi $tag" --generate-notes
+          }
+          gh release upload $tag DJMochi.exe DJMochi.exe.sha256 --clobber

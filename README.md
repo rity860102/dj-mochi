@@ -1,5 +1,9 @@
 # 🍡 DJ Mochi
 
+[![Build](https://github.com/rity860102/dj-mochi/actions/workflows/build.yml/badge.svg)](https://github.com/rity860102/dj-mochi/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/rity860102/dj-mochi)](https://github.com/rity860102/dj-mochi/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 <img src="src/icon/mochi.png" width="96" align="right" alt="DJ Mochi">
 
 **DJ Mochi 的 Windows 音訊裝置管理工具**：隱藏用不到的裝置、一鍵切換預設、調整音量，還能幫裝置改名字，而且 Windows 的音效選單也會顯示新名稱。
@@ -72,6 +76,8 @@ dj-mochi\
 ├─ original-names.json        原始名稱備份（第一次改名時自動建立，不進 git，請勿刪除）
 ├─ README.md
 ├─ LICENSE
+├─ .github\workflows\
+│  └─ build.yml              CI / CD 設定
 ├─ docs\
 │  └─ screenshot.png
 └─ src\
@@ -100,6 +106,33 @@ pwsh -File src\build.ps1
 ```
 
 > ⚠️ 編譯前要先關閉正在執行的 `DJMochi.exe`，否則會因為檔案被鎖住而無法覆寫。
+
+本機編譯的版本號預設是 `0.0.0-dev`，也可以用 `-Version` 指定：
+
+```powershell
+pwsh -File src\build.ps1 -Version 1.2.0
+```
+
+版本號會寫進 exe，在檔案上按右鍵 →「內容」→「詳細資料」可以看到。
+
+### CI / CD（GitHub Actions）
+
+設定檔在 `.github/workflows/build.yml`，在 GitHub 的 Windows 主機上用同一個 `build.ps1` 編譯。
+
+| 觸發 | 動作 |
+|------|------|
+| 推送到 `main`、發 PR | 編譯，exe 與 SHA256 存成 Artifact（版本 `0.0.0-dev+<commit>`） |
+| 推送 `v*` tag | 編譯並寫入 tag 的版本號，**自動建立 Release** 並附上 `DJMochi.exe`、`DJMochi.exe.sha256` |
+| 手動 | Actions 頁面 →「Build」→「Run workflow」 |
+
+**發布新版本**：
+
+```powershell
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+Release 的更新說明會依 commit 紀錄自動產生，發布後可以在 GitHub 上再手動編輯。
 
 ### 開發注意事項
 - 內建的 `csc.exe` **只支援 C# 5 語法**，不能用 `$"..."` 字串插值、`?.`、`=>` 運算式成員、`nameof`、`out var` 等新語法
