@@ -1,5 +1,6 @@
 // AirPodsScan.cs — 命令列測試工具：監聽附近 AirPods 廣播並印出解析結果
 // 建置與執行：pwsh -File tools\airpods-scan.ps1 [-Seconds 30]
+// 隱私：藍牙位址只顯示後 4 碼。原始封包（Hex）不含位址，但貼到 issue 前仍建議確認內容。
 
 using System;
 using System.Collections.Generic;
@@ -30,10 +31,10 @@ namespace DJMochi
                     lock (gate)
                     {
                         if (!seen.Add(key)) return;
-                        Console.WriteLine("{0:HH:mm:ss} {11} {1,-22} RSSI {2,4}  左 {3}{4}  右 {5}{6}  盒 {7}{8}  addr {9:X12}  [{10}]",
+                        Console.WriteLine("{0:HH:mm:ss} {11} {1,-22} RSSI {2,4}  左 {3}{4}  右 {5}{6}  盒 {7}{8}  addr …{9:X4}  [{10}]",
                             s.Time, s.ModelName, s.Rssi,
                             L(s.Left), C(s.ChargingLeft), L(s.Right), C(s.ChargingRight), L(s.Case), C(s.ChargingCase),
-                            s.Address, s.Hex, paired.Contains(s.Model) ? "[我的型號]" : "[其他]    ");
+                            s.Address & 0xFFFF, s.Hex, paired.Contains(s.Model) ? "[我的型號]" : "[其他]    ");
                     }
                 };
                 m.Start();

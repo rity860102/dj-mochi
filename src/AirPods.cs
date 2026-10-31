@@ -82,7 +82,8 @@ namespace DJMochi
         // 不是 AirPods 的 Proximity Pairing 廣播就回傳 null
         public static AirPodsStatus Parse(byte[] b)
         {
-            if (b == null || b.Length < 8 || b[0] != 0x07) return null;
+            // [1] 是後面資料的長度：要合理且不超過實際長度，避免短封包（例如配對設定模式）被當成電量
+            if (b == null || b.Length < 8 || b[0] != 0x07 || b[1] < 6 || b[1] + 2 > b.Length) return null;
             var s = new AirPodsStatus { Raw = b, Time = DateTime.Now };
             s.Model = (ushort)((b[3] << 8) | b[4]);
 
@@ -106,8 +107,10 @@ namespace DJMochi
     {
         BluetoothLEAdvertisementWatcher watcher;
 
-        // 注意：在背景執行緒觸發，更新 UI 前要切回 UI 執行緒
+        // 注意：以下事件都在背景執行緒觸發，更新 UI 前要切回 UI 執行緒
         public event Action<AirPodsStatus> Updated;
+        // 監聽意外中止（例如藍牙被關閉）。自己呼叫 Dispose 停止時不會觸發
+        public event Action Aborted;
 
         public void Start()
         {
@@ -116,7 +119,21 @@ namespace DJMochi
             // 只收 Apple 的廣播
             watcher.AdvertisementFilter.Advertisement.ManufacturerData.Add(new BluetoothLEManufacturerData { CompanyId = AirPodsParser.AppleCompanyId });
             watcher.Received += OnReceived;
+            watcher.Stopped += OnStopped;
             watcher.Start();
+            // 沒有藍牙 / 藍牙關閉時，Start() 不一定丟例外，而是直接變成 Aborted
+            if (watcher.Status == BluetoothLEAdvertisementWatcherStatus.Aborted) RaiseAborted();
+        }
+
+        void OnStopped(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementWatcherStoppedEventArgs args)
+        {
+            RaiseAborted();   // Dispose 會先解除訂閱，所以收到 Stopped 一定是意外中止
+        }
+
+        void RaiseAborted()
+        {
+            var h = Aborted;
+            if (h != null) h();
         }
 
         public BluetoothLEAdvertisementWatcherStatus Status
@@ -126,24 +143,35 @@ namespace DJMochi
 
         void OnReceived(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)
         {
-            foreach (var md in args.Advertisement.ManufacturerData)
+            // 背景執行緒上的 WinRT 事件：任何例外都不能往外丟，否則整個程式會結束
+            try
             {
-                if (md.CompanyId != AirPodsParser.AppleCompanyId) continue;
-                var bytes = new byte[md.Data.Length];
-                DataReader.FromBuffer(md.Data).ReadBytes(bytes);
-                var s = AirPodsParser.Parse(bytes);
-                if (s == null) continue;
-                s.Rssi = args.RawSignalStrengthInDBm;
-                s.Address = args.BluetoothAddress;
-                var h = Updated;
-                if (h != null) h(s);
+                foreach (var md in args.Advertisement.ManufacturerData)
+                {
+                    if (md.CompanyId != AirPodsParser.AppleCompanyId) continue;
+                    var bytes = new byte[md.Data.Length];
+                    using (var r = DataReader.FromBuffer(md.Data)) r.ReadBytes(bytes);
+                    var s = AirPodsParser.Parse(bytes);
+                    if (s == null) continue;
+                    s.Rssi = args.RawSignalStrengthInDBm;
+                    s.Address = args.BluetoothAddress;
+                    var h = Updated;
+                    if (h != null) h(s);
+                }
             }
+            catch { }
         }
 
         public void Dispose()
         {
             if (watcher == null) return;
-            try { watcher.Received -= OnReceived; watcher.Stop(); } catch { }
+            try
+            {
+                watcher.Received -= OnReceived;
+                watcher.Stopped -= OnStopped;
+                watcher.Stop();
+            }
+            catch { }
             watcher = null;
         }
     }

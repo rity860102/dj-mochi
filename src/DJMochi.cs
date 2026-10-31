@@ -359,6 +359,8 @@ namespace DJMochi
         HashSet<ushort> podsModels;         // 已配對的 AirPods 型號（只採用這些型號的廣播）
         const int PodsMinRssi = -75;        // 太遠的（可能是別人的）不採用
         const int PodsLowLevel = 10;        // 低於等於這個電量就提醒
+        DispatcherTimer podsRetry;          // 監聽中斷後的重試
+        DispatcherTimer podsRender;         // 電量變化時的重畫節流
 
         // 右下角通知區域
         WinForms.NotifyIcon tray;
@@ -942,6 +944,7 @@ namespace DJMochi
         void InitTray()
         {
             tray = new WinForms.NotifyIcon { Text = "DJ Mochi", Icon = LoadTrayIcon(), Visible = true };
+            tray.MouseMove += delegate { UpdateTrayText(); };   // 滑過時更新「N 分鐘前」
             tray.MouseClick += delegate(object s, WinForms.MouseEventArgs e)
             {
                 if (e.Button == WinForms.MouseButtons.Left) ShowFromTray();
@@ -1011,26 +1014,47 @@ namespace DJMochi
 
         // ---------- AirPods 電量 ----------
 
+        // 只在視窗顯示（使用中）時監聽；縮到右下角或關閉就停止，也不重試
         void StopPods()
         {
+            if (podsRetry != null) podsRetry.Stop();
             if (pods != null) { pods.Dispose(); pods = null; }
+            UpdateTrayText();
         }
 
         void StartPods()
         {
-            if (pods != null) return;
-            if (podsModels == null) podsModels = AirPodsParser.PairedModels();
+            if (pods != null || !IsVisible) return;
+            podsModels = AirPodsParser.PairedModels();   // 每次重讀：執行中才配對的新 AirPods 也能被接受
+            var m = new AirPodsMonitor();
+            pods = m;
             try
             {
-                pods = new AirPodsMonitor();
-                pods.Updated += delegate(AirPodsStatus s)
+                // 事件在背景執行緒進來，切回 UI 執行緒；並確認是「目前這個」monitor，丟掉已停止的舊 monitor 殘留事件
+                m.Updated += delegate(AirPodsStatus s)
                 {
-                    // 廣播在背景執行緒進來，切回 UI 執行緒處理
-                    Dispatcher.BeginInvoke(new Action(delegate { OnPods(s); }));
+                    Dispatcher.BeginInvoke(new Action(delegate { if (m == pods) OnPods(s); }));
                 };
-                pods.Start();
+                m.Aborted += delegate
+                {
+                    Dispatcher.BeginInvoke(new Action(delegate { if (m == pods) RetryPodsLater(); }));
+                };
+                m.Start();
             }
-            catch { pods = null; }   // 沒有藍牙或不支援 BLE：不顯示電量就好
+            catch { RetryPodsLater(); }   // 沒有藍牙或不支援 BLE
+        }
+
+        // 監聽中斷（例如藍牙被關掉）：30 秒後重試，只在視窗還開著時
+        void RetryPodsLater()
+        {
+            if (pods != null) { pods.Dispose(); pods = null; }
+            if (!IsVisible) return;
+            if (podsRetry == null)
+            {
+                podsRetry = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+                podsRetry.Tick += delegate { podsRetry.Stop(); StartPods(); };
+            }
+            podsRetry.Stop(); podsRetry.Start();
         }
 
         void OnPods(AirPodsStatus s)
@@ -1039,8 +1063,10 @@ namespace DJMochi
             // 只採用跟這台電腦已配對 AirPods 同型號的廣播（排除附近別人的不同型號 AirPods）
             if (podsModels != null && podsModels.Count > 0 && !podsModels.Contains(s.Model)) return;
             var cur = podsStatus;
-            // 附近有多副時：同一副、訊號明顯更強、或原本那副已經 30 秒沒消息，才換
-            bool take = cur == null || s.Address == cur.Address || s.Rssi > cur.Rssi + 5 || (DateTime.Now - podsSeen).TotalSeconds > 30;
+            // 換到另一個位址的條件（避免左右耳各自廣播、訊號強弱交替時來回跳）：
+            //   原本的位址已經 5 秒沒消息（位址輪換、或換耳機），或新的訊號強 10 dB 以上（更近的另一副）
+            bool take = cur == null || s.Address == cur.Address ||
+                        (DateTime.Now - podsSeen).TotalSeconds > 5 || s.Rssi > cur.Rssi + 10;
             if (!take) return;
 
             bool changed = cur == null || cur.Left != s.Left || cur.Right != s.Right || cur.Case != s.Case ||
@@ -1051,7 +1077,22 @@ namespace DJMochi
 
             UpdateTrayText();
             CheckPodsLow(s);
-            if (IsVisible && editBox == null) Render();
+            RenderPodsThrottled();
+        }
+
+        // 電量變化引起的重畫最多每秒一次（Render 會重建整個列表）
+        void RenderPodsThrottled()
+        {
+            if (podsRender == null)
+            {
+                podsRender = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+                podsRender.Tick += delegate
+                {
+                    podsRender.Stop();
+                    if (IsVisible && editBox == null) Render();
+                };
+            }
+            if (!podsRender.IsEnabled) podsRender.Start();
         }
 
         static string PodsSummary(AirPodsStatus s)
@@ -1063,6 +1104,7 @@ namespace DJMochi
             return string.Join("  ", parts);
         }
 
+        // 右下角提示文字。沒在監聽時（縮在右下角）顯示的是最後一次讀到的電量，加上「N 分鐘前」
         void UpdateTrayText()
         {
             if (tray == null) return;
@@ -1070,7 +1112,12 @@ namespace DJMochi
             if (podsStatus != null)
             {
                 string sum = PodsSummary(podsStatus);
-                if (sum.Length > 0) text += "\n" + podsStatus.ModelName + "\n" + sum;
+                if (sum.Length > 0)
+                {
+                    text += "\n" + podsStatus.ModelName + "\n" + sum;
+                    double min = (DateTime.Now - podsSeen).TotalMinutes;
+                    if (pods == null && min >= 1) text += string.Format("（{0:0} 分鐘前）", min);
+                }
             }
             tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;   // NotifyIcon.Text 上限 63 字
         }
