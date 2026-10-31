@@ -6,6 +6,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $fw   = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319'
+$wm   = 'C:\Windows\System32\WinMetadata'   # WinRT 中繼資料（AirPods 藍牙 BLE 廣播用）
 $src  = Join-Path $PSScriptRoot 'DJMochi.cs'
 $icon = Join-Path $PSScriptRoot 'icon'
 $out  = Join-Path (Split-Path $PSScriptRoot -Parent) 'DJMochi.exe'
@@ -39,7 +40,10 @@ try {
         "/r:$fw\WPF\WindowsBase.dll" `
         "/r:$fw\System.Xaml.dll" `
         "/r:$fw\System.Web.Extensions.dll" `
-        $src $info
+        "/r:$wm\Windows.Devices.winmd" "/r:$wm\Windows.Foundation.winmd" "/r:$wm\Windows.Storage.winmd" `
+        "/r:$fw\System.Runtime.WindowsRuntime.dll" "/r:$fw\System.Runtime.dll" `
+        "/r:$fw\System.Runtime.InteropServices.WindowsRuntime.dll" `
+        $src (Join-Path $PSScriptRoot 'AirPods.cs') $info
     if ($LASTEXITCODE -ne 0) { throw "編譯失敗 (exit $LASTEXITCODE)" }
 }
 finally { Remove-Item $info -Force -EA SilentlyContinue }

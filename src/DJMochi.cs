@@ -351,6 +351,14 @@ namespace DJMochi
         Button startupBtn;
         const string GPower = "";
 
+        // AirPods 電量（BLE 廣播）
+        AirPodsMonitor pods;
+        AirPodsStatus podsStatus;
+        DateTime podsSeen;
+        bool podsLowWarned;
+        const int PodsMinRssi = -80;        // 太遠的（可能是別人的）不採用
+        const int PodsLowLevel = 10;        // 低於等於這個電量就提醒
+
         // 右下角通知區域
         WinForms.NotifyIcon tray;
         bool trayTipShown;
@@ -399,6 +407,8 @@ namespace DJMochi
             SourceInitialized += delegate { ApplyDwm(); };
             ContentRendered += delegate { RefreshAll(); };
             InitTray();
+            // AirPods 電量只在視窗顯示時監聽；縮到右下角或關閉就停止，平常不在背景掃描
+            IsVisibleChanged += delegate { if (IsVisible) StartPods(); else StopPods(); };
         }
 
         // ---------- 外觀小工具 ----------
@@ -691,6 +701,11 @@ namespace DJMochi
                 var sub = T(d.Dev, 13, "#8A8F98"); sub.Margin = new Thickness(0, 1, 0, 0);
                 info.Children.Add(sub);
             }
+            if (!compact && podsStatus != null && d.Dev != null && d.Dev.IndexOf("AirPods", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                var bat = PodsBattery();
+                if (bat != null) info.Children.Add(bat);
+            }
             Grid.SetColumn(info, 1);
             grid.Children.Add(info);
 
@@ -916,6 +931,7 @@ namespace DJMochi
         protected override void OnClosed(EventArgs e)
         {
             if (tray != null) { tray.Visible = false; tray.Dispose(); tray = null; }   // X = 直接結束，圖示一起移除
+            if (pods != null) { pods.Dispose(); pods = null; }
             Audio.ClearCache();
             base.OnClosed(e);
         }
@@ -990,6 +1006,115 @@ namespace DJMochi
             var exit = new WinForms.ToolStripMenuItem("結束");
             exit.Click += delegate { Close(); };
             menu.Items.Add(exit);
+        }
+
+        // ---------- AirPods 電量 ----------
+
+        void StopPods()
+        {
+            if (pods != null) { pods.Dispose(); pods = null; }
+        }
+
+        void StartPods()
+        {
+            if (pods != null) return;
+            try
+            {
+                pods = new AirPodsMonitor();
+                pods.Updated += delegate(AirPodsStatus s)
+                {
+                    // 廣播在背景執行緒進來，切回 UI 執行緒處理
+                    Dispatcher.BeginInvoke(new Action(delegate { OnPods(s); }));
+                };
+                pods.Start();
+            }
+            catch { pods = null; }   // 沒有藍牙或不支援 BLE：不顯示電量就好
+        }
+
+        void OnPods(AirPodsStatus s)
+        {
+            if (s.Rssi < PodsMinRssi) return;
+            var cur = podsStatus;
+            // 附近有多副時：同一副、訊號明顯更強、或原本那副已經 30 秒沒消息，才換
+            bool take = cur == null || s.Address == cur.Address || s.Rssi > cur.Rssi + 5 || (DateTime.Now - podsSeen).TotalSeconds > 30;
+            if (!take) return;
+
+            bool changed = cur == null || cur.Left != s.Left || cur.Right != s.Right || cur.Case != s.Case ||
+                           cur.ChargingLeft != s.ChargingLeft || cur.ChargingRight != s.ChargingRight || cur.ChargingCase != s.ChargingCase;
+            podsStatus = s;
+            podsSeen = DateTime.Now;
+            if (!changed) return;   // 廣播很頻繁，數值沒變就不重畫
+
+            UpdateTrayText();
+            CheckPodsLow(s);
+            if (IsVisible && editBox == null) Render();
+        }
+
+        static string PodsSummary(AirPodsStatus s)
+        {
+            var parts = new List<string>();
+            if (s.Left >= 0)  parts.Add("左 " + s.Left + "%" + (s.ChargingLeft ? "⚡" : ""));
+            if (s.Right >= 0) parts.Add("右 " + s.Right + "%" + (s.ChargingRight ? "⚡" : ""));
+            if (s.Case >= 0)  parts.Add("盒 " + s.Case + "%" + (s.ChargingCase ? "⚡" : ""));
+            return string.Join("  ", parts);
+        }
+
+        void UpdateTrayText()
+        {
+            if (tray == null) return;
+            string text = "DJ Mochi";
+            if (podsStatus != null)
+            {
+                string sum = PodsSummary(podsStatus);
+                if (sum.Length > 0) text += "\n" + podsStatus.ModelName + "\n" + sum;
+            }
+            tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;   // NotifyIcon.Text 上限 63 字
+        }
+
+        void CheckPodsLow(AirPodsStatus s)
+        {
+            int low = int.MaxValue;
+            if (s.Left >= 0 && !s.ChargingLeft) low = Math.Min(low, s.Left);
+            if (s.Right >= 0 && !s.ChargingRight) low = Math.Min(low, s.Right);
+            if (low == int.MaxValue) return;
+            if (low <= PodsLowLevel && !podsLowWarned)
+            {
+                podsLowWarned = true;
+                if (tray != null) tray.ShowBalloonTip(4000, "AirPods 電量低", s.ModelName + "：" + PodsSummary(s), WinForms.ToolTipIcon.Warning);
+            }
+            else if (low > PodsLowLevel + 10) podsLowWarned = false;   // 充回 20% 以上才重新提醒
+        }
+
+        // AirPods 那一列名稱下方的電量顯示
+        UIElement PodsBattery()
+        {
+            var s = podsStatus;
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            bool stale = (DateTime.Now - podsSeen).TotalMinutes > 3;
+            Action<string, int, bool> add = delegate(string label, int v, bool charging)
+            {
+                if (v < 0) return;
+                string color = stale ? "#6B7079" : v >= 50 ? "#3FD13F" : v >= 20 ? "#F2C14E" : "#E05A5A";
+                var b = new Border
+                {
+                    CornerRadius = new CornerRadius(8), Background = B("#14161B"), Padding = new Thickness(8, 2, 8, 2),
+                    Margin = new Thickness(0, 0, 6, 0), BorderBrush = B(color), BorderThickness = new Thickness(1)
+                };
+                var t = T(label + " " + v + "%" + (charging ? " ⚡" : ""), 12, color, true);
+                b.Child = t;
+                sp.Children.Add(b);
+            };
+            add("左", s.Left, s.ChargingLeft);
+            add("右", s.Right, s.ChargingRight);
+            add("盒", s.Case, s.ChargingCase);
+            if (sp.Children.Count == 0) return null;
+            if (stale)
+            {
+                var ago = T(string.Format("{0:0} 分鐘前", (DateTime.Now - podsSeen).TotalMinutes), 12, "#6B7079");
+                sp.Children.Add(ago);
+            }
+            sp.ToolTip = "AirPods 廣播的電量精度為 10%（" + s.ModelName + "）";
+            return sp;
         }
 
         void ToggleStartup()
