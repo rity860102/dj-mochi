@@ -1,0 +1,9 @@
+# 編譯產物（用 src\build.ps1 產生；發布請放 GitHub Releases）
+*.exe
+*.pdb
+
+# 個人資料：改名前的原始名稱備份，內容是這台電腦的裝置 ID
+original-names.json
+
+# 圖示預覽圖（由 make-icon.ps1 產生）
+src/icon/preview.png
