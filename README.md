@@ -122,16 +122,19 @@ pwsh -File src\build.ps1 -Version 1.2.0
 
 | 觸發 | 動作 |
 |------|------|
-| 推送到 `main`、發 PR | 編譯，exe 與 SHA256 存成 Artifact（版本 `0.0.0-dev+<commit>`） |
-| 推送 `v*` tag | 編譯並寫入 tag 的版本號，**自動建立 Release** 並附上 `DJMochi.exe`、`DJMochi.exe.sha256` |
-| 手動 | Actions 頁面 →「Build」→「Run workflow」 |
+| 推送到 `main` | 編譯 → **依 commit 類型自動決定版本號 → 建立 Release**，附上 `DJMochi.exe`、`DJMochi.exe.sha256` |
+| 推送 `v*` tag | 用該 tag 的版本號建立 Release（需要手動指定版本時用） |
+| 發 PR、手動執行 | 只編譯，exe 存成 Artifact（版本 `0.0.0-dev+<commit>`） |
 
-**發布新版本**：
+**發布新版本 = 正常 commit 並 push 到 `main`**。版本號依照上次發布之後的 commit 訊息（[Conventional Commits](https://www.conventionalcommits.org/zh-hant/)）自動遞增：
 
-```powershell
-git tag v1.1.0
-git push origin v1.1.0
-```
+| 上次發布後的 commit | 版本變化 | 例子 |
+|---|---|---|
+| 有 `feat:` | 第二碼 +1 | `1.0.0` → `1.1.0` |
+| 只有 `fix:`、`refactor:`、`perf:` 等 | 第三碼 +1 | `1.1.0` → `1.1.1` |
+| 有 `feat!:` 或內文有 `BREAKING CHANGE` | 第一碼 +1 | `1.1.0` → `2.0.0` |
+| 全部都是 `docs:`、`ci:`、`chore:`、`style:`、`test:` | **不發布**，只跑 CI | |
+| 最新 commit 訊息含 `[skip release]` | **不發布** | |
 
 Release 的更新說明會依 commit 紀錄自動產生，發布後可以在 GitHub 上再手動編輯。
 

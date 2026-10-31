@@ -1,6 +1,11 @@
 # DJ Mochi CI/CD
-# - 推送到 main / 發 PR：編譯並上傳 exe 為 Artifact（CI）
-# - 推送 v* tag：編譯、寫入版本號、建立 Release 並附上 exe 與 SHA256（CD）
+# - 推送到 main：編譯 → 依 commit 類型自動決定版本號 → 建立 Release（附 exe 與 SHA256）
+#     有 feat:            → 第二碼 +1（1.0.0 → 1.1.0）
+#     有 BREAKING / !:    → 第一碼 +1（1.1.0 → 2.0.0）
+#     其他（fix、refactor…）→ 第三碼 +1（1.1.0 → 1.1.1）
+#     全部都是 docs/ci/chore，或訊息含 [skip release] → 不發布，只跑 CI
+# - 手動推送 v* tag：用該版本號建立 Release
+# - PR / 手動執行：只編譯，exe 存成 Artifact
 name: Build
 
 on:
@@ -11,25 +16,70 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # 建立 Release、上傳附件需要
+  contents: write   # 建立 tag / Release、上傳附件需要
+
+# 連續 push 時依序執行，避免兩次算出同一個版本號
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要完整歷史和 tag 來計算版本
 
       - name: 決定版本號
         id: ver
         shell: pwsh
         run: |
+          $release = 'false'
+          $short = $env:GITHUB_SHA.Substring(0, 7)
+          $v = "0.0.0-dev+$short"
+
           if ($env:GITHUB_REF_TYPE -eq 'tag') {
             $v = $env:GITHUB_REF_NAME.TrimStart('v')
-          } else {
-            $v = "0.0.0-dev+$($env:GITHUB_SHA.Substring(0, 7))"
+            $release = 'true'
           }
-          "version=$v" >> $env:GITHUB_OUTPUT
-          "版本：$v"
+          elseif ($env:GITHUB_EVENT_NAME -eq 'push' -and $env:GITHUB_REF_NAME -eq 'main') {
+            $last = git describe --tags --abbrev=0 --match 'v[0-9]*' 2>$null
+            if ($LASTEXITCODE -ne 0 -or -not $last) { $last = $null; $base = [version]'0.0.0' }
+            else { $base = [version]($last.TrimStart('v') -split '[-+]')[0] }
+
+            $range = if ($last) { "$last..HEAD" } else { 'HEAD' }
+            $subjects = @(git log $range --format='%s')
+            $bodies   = (git log $range --format='%b') -join "`n"
+            "上次發布：$(if ($last) { $last } else { '（無）' })，之後有 $($subjects.Count) 個 commit"
+            $subjects | ForEach-Object { "  - $_" }
+
+            $releasable = @($subjects | Where-Object { $_ -notmatch '^(docs|ci|chore|style|test)(\(.+\))?!?:' })
+            if ($subjects.Count -eq 0) {
+              "沒有新 commit，不發布"
+            }
+            elseif ((git log -1 --format='%B') -match '\[skip release\]') {
+              "commit 訊息含 [skip release]，不發布"
+            }
+            elseif ($releasable.Count -eq 0) {
+              "只有 docs / ci / chore 類 commit，不發布"
+            }
+            else {
+              if (($subjects -match '^\w+(\(.+\))?!:') -or ($bodies -match 'BREAKING CHANGE')) {
+                $next = [version]::new($base.Major + 1, 0, 0)
+              } elseif ($subjects -match '^feat(\(.+\))?:') {
+                $next = [version]::new($base.Major, $base.Minor + 1, 0)
+              } else {
+                $next = [version]::new($base.Major, $base.Minor, [math]::Max($base.Build, 0) + 1)
+              }
+              $v = $next.ToString()
+              $release = 'true'
+            }
+          }
+
+          "version=$v"       >> $env:GITHUB_OUTPUT
+          "release=$release" >> $env:GITHUB_OUTPUT
+          "版本：$v（發布：$release）"
 
       - name: 編譯
         shell: pwsh
@@ -44,9 +94,9 @@ jobs:
           @(
             "### 🍡 DJMochi.exe"
             ""
-            "| 版本 | 大小 | SHA256 |"
-            "|------|------|--------|"
-            "| ${{ steps.ver.outputs.version }} | $kb KB | ``$h`` |"
+            "| 版本 | 發布 | 大小 | SHA256 |"
+            "|------|------|------|--------|"
+            "| ${{ steps.ver.outputs.version }} | ${{ steps.ver.outputs.release }} | $kb KB | ``$h`` |"
           ) -join "`n" >> $env:GITHUB_STEP_SUMMARY
 
       - name: 上傳 Artifact
@@ -57,15 +107,17 @@ jobs:
             DJMochi.exe
             DJMochi.exe.sha256
 
-      - name: 建立 / 更新 Release
-        if: github.ref_type == 'tag'
+      - name: 建立 Release
+        if: steps.ver.outputs.release == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = $env:GITHUB_REF_NAME
+          $tag = "v${{ steps.ver.outputs.version }}"
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --title "🍡 DJ Mochi $tag" --generate-notes
+            # 自動版號：tag 不存在，連同 tag 一起建在這個 commit 上
+            gh release create $tag --target $env:GITHUB_SHA --title "🍡 DJ Mochi $tag" --generate-notes
           }
           gh release upload $tag DJMochi.exe DJMochi.exe.sha256 --clobber
+          "已發布：https://github.com/${{ github.repository }}/releases/tag/$tag" >> $env:GITHUB_STEP_SUMMARY
