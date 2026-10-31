@@ -260,6 +260,48 @@ namespace DJMochi
         [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
     }
 
+    // 開機自動啟動：HKCU\...\Run（工作管理員「啟動應用程式」讀的就是這裡）
+    static class Startup
+    {
+        const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        const string ApprovedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+        const string Name = "DJMochi";
+        public const string TrayArg = "--tray";
+
+        static string ExePath { get { return Process.GetCurrentProcess().MainModule.FileName; } }
+        static string Command { get { return "\"" + ExePath + "\" " + TrayArg; } }
+
+        // 已登記、路徑是目前這個 exe、且沒有在工作管理員被停用
+        public static bool IsEnabled()
+        {
+            using (var k = Registry.CurrentUser.OpenSubKey(RunKey))
+            {
+                var v = k == null ? null : k.GetValue(Name) as string;
+                if (v == null || v.IndexOf(ExePath, StringComparison.OrdinalIgnoreCase) < 0) return false;
+            }
+            using (var a = Registry.CurrentUser.OpenSubKey(ApprovedKey))
+            {
+                var b = a == null ? null : a.GetValue(Name) as byte[];
+                if (b != null && b.Length > 0 && (b[0] & 1) == 1) return false;   // 工作管理員停用：第一個位元組為奇數
+            }
+            return true;
+        }
+
+        public static void SetEnabled(bool on)
+        {
+            using (var k = Registry.CurrentUser.CreateSubKey(RunKey))
+            {
+                if (on) k.SetValue(Name, Command);
+                else k.DeleteValue(Name, false);
+            }
+            // 清掉工作管理員的停用紀錄，避免「登記了但被停用」
+            using (var a = Registry.CurrentUser.OpenSubKey(ApprovedKey, true))
+            {
+                if (a != null) a.DeleteValue(Name, false);
+            }
+        }
+    }
+
     // ===================== 主視窗 =====================
 
     class MainWindow : Window
@@ -305,6 +347,9 @@ namespace DJMochi
         TextBox editBox;
         bool statusSticky;
         string pendingHideId;          // 等待二次確認隱藏的預設裝置
+
+        Button startupBtn;
+        const string GPower = "";
 
         // 右下角通知區域
         WinForms.NotifyIcon tray;
@@ -465,8 +510,13 @@ namespace DJMochi
             refresh.Margin = new Thickness(0); refresh.Padding = new Thickness(18, 10, 18, 10);
             refresh.Click += delegate { RefreshAll(); };
             DockPanel.SetDock(refresh, Dock.Right);
+            startupBtn = Btn("Pill"); startupBtn.Padding = new Thickness(18, 10, 18, 10);
+            startupBtn.ToolTip = "開機時自動啟動，並直接縮在右下角";
+            startupBtn.Click += delegate { ToggleStartup(); };
+            DockPanel.SetDock(startupBtn, Dock.Right);
+            UpdateStartupBtn();
             status = T("", 15, "#8A8F98"); status.Margin = new Thickness(16, 0, 16, 0);
-            tabsBar.Children.Add(tabR); tabsBar.Children.Add(tabC); tabsBar.Children.Add(refresh); tabsBar.Children.Add(status);
+            tabsBar.Children.Add(tabR); tabsBar.Children.Add(tabC); tabsBar.Children.Add(refresh); tabsBar.Children.Add(startupBtn); tabsBar.Children.Add(status);
             main.Children.Add(tabsBar);
 
             var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Focusable = false };
@@ -931,9 +981,38 @@ namespace DJMochi
             menu.Items.Add(sub);
             menu.Items.Add(new WinForms.ToolStripSeparator());
 
+            var auto = new WinForms.ToolStripMenuItem("開機時自動啟動");
+            auto.Checked = Startup.IsEnabled();
+            auto.Click += delegate { ToggleStartup(); };
+            menu.Items.Add(auto);
+            menu.Items.Add(new WinForms.ToolStripSeparator());
+
             var exit = new WinForms.ToolStripMenuItem("結束");
             exit.Click += delegate { Close(); };
             menu.Items.Add(exit);
+        }
+
+        void ToggleStartup()
+        {
+            try
+            {
+                bool on = !Startup.IsEnabled();
+                Startup.SetEnabled(on);
+                SetStatus(on ? "已加入開機自動啟動（工作管理員 →「啟動應用程式」）" : "已取消開機自動啟動");
+            }
+            catch (Exception ex) { SetStatus("設定開機啟動失敗：" + ex.Message); }
+            UpdateStartupBtn();
+            if (IsVisible) Render();
+        }
+
+        void UpdateStartupBtn()
+        {
+            bool on = false;
+            try { on = Startup.IsEnabled(); } catch { }
+            startupBtn.Content = IconLabel(GPower, on ? "開機啟動：開" : "開機啟動：關", 17);
+            startupBtn.Background = B(on ? "#107C10" : "#1B1E25");
+            startupBtn.Foreground = B(on ? "#FFFFFF" : "#C9CDD4");
+            startupBtn.Margin = new Thickness(0, 0, 12, 0);
         }
 
         void HideToTray()
@@ -1190,8 +1269,10 @@ namespace DJMochi
         const string ShowEventName = @"Local\DJMochi_Show";
 
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            // --tray：開機自動啟動時直接縮在右下角，不顯示視窗
+            bool startInTray = args.Any(a => string.Equals(a, Startup.TrayArg, StringComparison.OrdinalIgnoreCase));
             bool created;
             using (var mutex = new Mutex(true, @"Local\DJMochi_SingleInstance", out created))
             {
@@ -1241,7 +1322,10 @@ namespace DJMochi
                 }) { IsBackground = true };
                 listener.Start();
 
-                app.Run(win);
+                app.ShutdownMode = ShutdownMode.OnMainWindowClose;
+                app.MainWindow = win;
+                if (startInTray) app.Run();   // 視窗不顯示，只留右下角圖示
+                else app.Run(win);
             }
         }
     }
