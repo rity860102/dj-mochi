@@ -13,8 +13,15 @@ dj-mochi\
 ├─ docs\
 │  ├─ DEVELOPMENT.md          本文件
 │  └─ screenshot.png
-├─ src\
-│  ├─ DJMochi.cs              主程式（C# 5 / WPF）
+├─ src\                      C# 5 / WPF，build.ps1 會編譯這裡所有的 .cs
+│  ├─ Program.cs              進入點：防多開、開機縮在右下角
+│  ├─ MainWindow.cs           主視窗：版面、裝置列表、顯示 / 隱藏、設為預設、重新命名
+│  ├─ MainWindow.Tray.cs      右下角通知區域、縮小 / 叫回、開機啟動按鈕
+│  ├─ MainWindow.AirPods.cs   AirPods 電量的監聽時機、篩選與顯示
+│  ├─ MainWindow.Styles.cs    按鈕、滑桿、捲軸等 WPF 樣式
+│  ├─ Audio.cs                音訊裝置清單與控制（顯示 / 隱藏、預設、改名、音量）
+│  ├─ Startup.cs              開機自動啟動（HKCU Run）
+│  ├─ Interop.cs              Windows COM 介面與 Win32 API 宣告
 │  ├─ AirPods.cs              AirPods BLE 廣播監聽與電量解析
 │  ├─ build.ps1               編譯腳本
 │  └─ icon\
