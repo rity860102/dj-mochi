@@ -1,112 +1,117 @@
 # 🍡 DJ Mochi
 
+**English** | [繁體中文](README.zh-TW.md)
+
 [![Build](https://github.com/rity860102/dj-mochi/actions/workflows/build.yml/badge.svg)](https://github.com/rity860102/dj-mochi/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/rity860102/dj-mochi)](https://github.com/rity860102/dj-mochi/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <img src="src/icon/mochi.png" width="96" align="right" alt="DJ Mochi">
 
-輕巧的 Windows 音訊裝置管理工具。把用不到的裝置藏起來、一鍵切換耳機和喇叭、個別調整音量，還能幫裝置取個好認的名字。
+A lightweight audio device manager for Windows. Hide the devices you never use, switch between headphones and speakers in one click, adjust each device's volume, and give your devices names you can actually recognize.
 
-- **免安裝**：單一 exe，使用 Windows 內建的 .NET Framework 4.8
-- **不需要系統管理員權限**
-- **開得快**：點開到視窗出現約 0.3 秒
-- **設定寫進 Windows**：關掉程式、重新開機後依然有效
+- **No installation**: a single exe that runs on the .NET Framework 4.8 built into Windows
+- **No administrator rights needed**
+- **Fast**: the window opens in about 0.3 seconds
+- **Settings live in Windows**: they stay in effect after you close the app or restart your PC
 
-![DJ Mochi 截圖](docs/screenshot.png)
-
----
-
-## 功能
-
-### 🔊 裝置管理
-- **顯示 / 隱藏**：隱藏的裝置不會出現在 Windows 的音效選單，Discord、遊戲等程式也選不到。效果等同 Windows 設定裡的「不允許」
-- **設為預設**：一鍵切換預設的輸出 / 輸入裝置
-- **音量 / 靜音**：每個裝置都有自己的音量滑桿，也可以用滑鼠滾輪微調
-- **重新命名**：改完名字，**Windows 的音效選單也會顯示新名稱**。原始名稱會自動備份，隨時可以還原
-
-### 🎧 AirPods 電量
-- AirPods 是預設播放裝置時，會在那一列顯示**左耳、右耳、充電盒**的電量，充電中會加上 ⚡
-- 只在視窗開著、而且 AirPods 是預設裝置時才讀取，平常不會在背景掃描
-- 電量精度為 10%（AirPods 對外廣播的精度就是 10%，iPhone 以外的裝置都只能讀到這個精度）
-
-### 📌 常駐小工具
-- **縮到右下角**：按最小化會縮到通知區域；點圖示叫回視窗，右鍵選單可以**不開視窗直接切換預設播放裝置**。按 X 則直接結束程式
-- **開機自動啟動**：打開後會出現在工作管理員的「啟動應用程式」，開機時直接縮在右下角
-- **防多開**：已經開著時再點一次 exe，會把原本的視窗叫出來
-- **繁體中文 / English**：預設跟隨 Windows 的顯示語言，也可以在右下角選單的「語言 / Language」手動切換
-
-### 🛡️ 防呆
-- 播放裝置至少會保留一個，避免全部隱藏後沒有聲音
-- 隱藏目前的預設裝置時，需要再按一次確認
+![DJ Mochi screenshot](docs/screenshot-en.png)
 
 ---
 
-## 下載與安裝
+## Features
 
-**系統需求**：Windows 10 / 11（64 位元）
+### 🔊 Device management
+- **Show / hide**: hidden devices disappear from the Windows sound menu, and apps like Discord or games can't pick them either. Same as "Don't allow" in Windows Settings
+- **Set default**: switch the default output or input device in one click
+- **Volume / mute**: every device gets its own volume slider; scroll the mouse wheel for fine control
+- **Rename**: new names **also show up in the Windows sound menu**. The original name is backed up so you can restore it anytime
 
-1. 到 [Releases](https://github.com/rity860102/dj-mochi/releases/latest) 下載 `DJMochi.exe`
-2. 放到任何資料夾直接執行，不需要安裝
-3. 建議在 exe 上按右鍵 →「釘選到工作列」
+### 🎧 AirPods battery
+- When your AirPods are the default playback device, their row shows the **left, right and case** battery levels, with ⚡ while charging
+- Battery is only read while the window is open and the AirPods are the default device. Nothing scans in the background
+- Levels are shown in 10% steps. That's the precision AirPods broadcast, so every device other than an iPhone sees the same
 
-> 第一次執行時，Windows SmartScreen 可能會顯示「Windows 已保護您的電腦」，因為這個 exe 沒有數位簽章。點「其他資訊」→「仍要執行」即可。不放心的話，可以參考[開發說明](docs/DEVELOPMENT.md)自己從原始碼編譯。
+### 📌 Lives in the notification area
+- **Minimize to the notification area**: click the icon to bring the window back. Right-click it to **switch the default playback device without opening the window**. The X button exits the app
+- **Start with Windows**: once enabled, DJ Mochi appears under Task Manager → Startup apps and starts minimized
+- **Single instance**: launching the exe again brings the existing window back
+- **English / 繁體中文**: follows your Windows display language by default. Switch manually from the notification area menu → "Language / 語言"
 
-**升級**：關閉舊版，用新的 exe 取代即可，所有設定都會保留。
+### 🛡️ Safeguards
+- At least one playback device always stays visible, so you never end up with no sound at all
+- Hiding the current default device asks for confirmation first
 
 ---
 
-## 使用方式
+## Download
 
-| 想做的事 | 操作 |
+**Requirements**: Windows 10 / 11 (64-bit)
+
+1. Download `DJMochi.exe` from [Releases](https://github.com/rity860102/dj-mochi/releases/latest)
+2. Put it in any folder and run it. No installation needed
+3. Tip: right-click the exe → "Pin to taskbar"
+
+> The first time you run it, Windows SmartScreen may show "Windows protected your PC" because the exe isn't code-signed. Click "More info" → "Run anyway". If you'd rather not, you can build it from source yourself (see the [development guide](docs/DEVELOPMENT.md), in Traditional Chinese).
+
+**Upgrading**: close the old version and replace the exe. All your settings are kept.
+
+---
+
+## How to use
+
+| To do this | Do this |
 |---|---|
-| 切換播放 / 錄音裝置清單 | 點上方的「播放」「錄音」 |
-| 隱藏 / 顯示裝置 | 點每列右側的「隱藏」/「顯示」 |
-| 切換預設裝置 | 點「設為預設」，或在右下角圖示按右鍵 →「預設播放裝置」 |
-| 調整音量 | 拖曳滑桿，或在滑桿上用滾輪 |
-| 靜音 | 點滑桿左邊的喇叭圖示（靜音時變紅） |
-| 重新命名 | 點名稱旁的鉛筆 → 輸入名稱 → Enter 儲存、Esc 取消 |
-| 還原原始名稱 | 點名稱旁的還原按鈕，或把名稱清空後儲存 |
-| 開機自動啟動 | 點右上角的「開機啟動」 |
-| 切換語言 | 在右下角圖示按右鍵 →「語言 / Language」 |
-| 重新整理 | 按 F5，或點「重新整理」 |
+| Switch between playback and recording devices | Click "Playback" / "Recording" at the top |
+| Hide / show a device | Click "Hide" / "Show" on the right side of its row |
+| Change the default device | Click "Set default", or right-click the notification area icon → "Default playback device" |
+| Adjust volume | Drag the slider, or scroll over it |
+| Mute | Click the speaker icon left of the slider (turns red when muted) |
+| Rename | Click the pencil next to the name → type a name → Enter to save, Esc to cancel |
+| Restore the original name | Click the restore button next to the name, or save an empty name |
+| Start with Windows | Click "Startup" at the top right |
+| Change language | Right-click the notification area icon → "Language / 語言" |
+| Refresh | Press F5, or click "Refresh" |
 
-> 在 Windows 設定或其他軟體裡改了裝置、或插拔耳機之後，按 **F5** 重新整理。
-
----
-
-## 常見問題
-
-**設定會保留嗎？**
-會。所有設定都直接寫進 Windows 的音訊設定，重新開機後依然有效，平常不需要開著 DJ Mochi。
-不過以下情況 Windows 可能會重設裝置，再打開 DJ Mochi 設定一次就好：
-- 更新或重裝音效驅動程式
-- 耳機或接收器換插到另一個 USB 孔（Windows 可能會當成新裝置）
-- Windows 大版本更新
-
-**AirPods 電量沒有顯示？**
-- 確認 AirPods 是**預設播放裝置**，而且藍牙有開
-- AirPods 不是每秒都在廣播，打開視窗後可能要等十幾秒
-- 耳機收進盒子、蓋上蓋子後就不會廣播；充電盒的電量通常要打開盒蓋才讀得到
-
-**AirPods 出現兩個（一般和 Hands-Free）？**
-Hands-Free 是通話模式，音質較差，但可以用 AirPods 的麥克風。不用 AirPods 的麥克風的話，可以把它隱藏，避免程式自動切換到通話模式。
-
-**「Steam Streaming Speakers / Microphone」是什麼？**
-Steam 遠端暢玩（Remote Play）用的虛擬裝置，從這台電腦串流遊戲到其他裝置時才會用到。平常可以隱藏，不影響串流。
-
-**有用 SteelSeries Sonar 之類的虛擬混音軟體？**
-不要隱藏實體耳機，混音軟體要透過它們出聲。預設裝置請設成混音軟體建立的虛擬裝置（例如 `Sonar - Gaming`）。
-
-**工作列還顯示舊圖示？**
-這是 Windows 的圖示快取，把舊的釘選取消再重新釘選就好。
+> If you change devices in Windows Settings or another app, or plug / unplug headphones, press **F5** to refresh.
 
 ---
 
-## 開發
+## FAQ
 
-建置方式、CI/CD、技術原理請見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+**Are my settings kept?**
+Yes. Everything is written directly into Windows' own audio settings, so it survives restarts and you don't need to keep DJ Mochi running.
+Windows may reset a device in these cases; just open DJ Mochi and set it again:
+- Updating or reinstalling audio drivers
+- Plugging headphones or a receiver into a different USB port (Windows may treat it as a new device)
+- Major Windows updates
 
-## 授權
+**My AirPods battery doesn't show up**
+- Make sure the AirPods are the **default playback device** and Bluetooth is on
+- AirPods don't broadcast every second, so it can take 10+ seconds after opening the window
+- AirPods stop broadcasting once they're in a closed case. The case battery usually only shows with the lid open
 
-[MIT License](LICENSE)。DJ Mochi 圖示同樣適用 MIT 授權。
+**Why are there two AirPods entries (normal and Hands-Free)?**
+Hands-Free is the call mode. It sounds worse but lets apps use the AirPods microphone. If you don't use the AirPods mic, hide it so apps don't switch to call mode on their own.
+
+**What are "Steam Streaming Speakers / Microphone"?**
+Virtual devices used by Steam Remote Play when streaming games from this PC to another device. You can safely hide them; streaming still works.
+
+**I use a virtual mixer like SteelSeries Sonar**
+Don't hide your physical headphones, since the mixer plays sound through them. Set the default device to one of the mixer's virtual devices (for example `Sonar - Gaming`).
+
+**Device names show up in another language**
+Device names like "Headphones" come from Windows and follow its display language. Use the pencil button to rename them.
+
+**The taskbar still shows the old icon**
+That's the Windows icon cache. Unpin the old shortcut and pin the exe again.
+
+---
+
+## Development
+
+Build steps, CI/CD and technical details are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (Traditional Chinese).
+
+## License
+
+[MIT License](LICENSE). The DJ Mochi icon is also MIT licensed.

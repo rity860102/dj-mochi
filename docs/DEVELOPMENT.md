@@ -6,13 +6,15 @@
 dj-mochi\
 ├─ DJMochi.exe                主程式（編譯產生，不進 git）
 ├─ original-names.json        原始名稱備份（第一次改名時自動建立，不進 git）
-├─ README.md
+├─ README.md                  英文說明（GitHub 首頁）
+├─ README.zh-TW.md            繁體中文說明
 ├─ LICENSE
 ├─ .github\workflows\
 │  └─ build.yml               CI / CD
 ├─ docs\
 │  ├─ DEVELOPMENT.md          本文件
-│  └─ screenshot.png
+│  ├─ screenshot.png          中文介面截圖（README.zh-TW.md）
+│  └─ screenshot-en.png       英文介面截圖（README.md）
 ├─ src\                      C# 5 / WPF，build.ps1 會編譯這裡所有的 .cs
 │  ├─ Program.cs              進入點：防多開、開機縮在右下角
 │  ├─ MainWindow.cs           主視窗：版面、裝置列表、顯示 / 隱藏、設為預設、重新命名
