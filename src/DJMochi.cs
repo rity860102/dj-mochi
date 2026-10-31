@@ -356,7 +356,8 @@ namespace DJMochi
         AirPodsStatus podsStatus;
         DateTime podsSeen;
         bool podsLowWarned;
-        const int PodsMinRssi = -80;        // 太遠的（可能是別人的）不採用
+        HashSet<ushort> podsModels;         // 已配對的 AirPods 型號（只採用這些型號的廣播）
+        const int PodsMinRssi = -75;        // 太遠的（可能是別人的）不採用
         const int PodsLowLevel = 10;        // 低於等於這個電量就提醒
 
         // 右下角通知區域
@@ -1018,6 +1019,7 @@ namespace DJMochi
         void StartPods()
         {
             if (pods != null) return;
+            if (podsModels == null) podsModels = AirPodsParser.PairedModels();
             try
             {
                 pods = new AirPodsMonitor();
@@ -1034,6 +1036,8 @@ namespace DJMochi
         void OnPods(AirPodsStatus s)
         {
             if (s.Rssi < PodsMinRssi) return;
+            // 只採用跟這台電腦已配對 AirPods 同型號的廣播（排除附近別人的不同型號 AirPods）
+            if (podsModels != null && podsModels.Count > 0 && !podsModels.Contains(s.Model)) return;
             var cur = podsStatus;
             // 附近有多副時：同一副、訊號明顯更強、或原本那副已經 30 秒沒消息，才換
             bool take = cur == null || s.Address == cur.Address || s.Rssi > cur.Rssi + 5 || (DateTime.Now - podsSeen).TotalSeconds > 30;

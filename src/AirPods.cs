@@ -55,6 +55,30 @@ namespace DJMochi
 
         static int Level(int nibble) { return nibble <= 10 ? nibble * 10 : -1; }
 
+        // 這台電腦已配對的 AirPods 型號。
+        // 藍牙裝置識別碼長這樣：BTHENUM\{...}_VID&0001004C_PID&2027 —— PID 兩個位元組對調就是廣播裡的型號（0x2720）
+        public static HashSet<ushort> PairedModels()
+        {
+            var set = new HashSet<ushort>();
+            try
+            {
+                using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\BTHENUM"))
+                {
+                    if (k == null) return set;
+                    foreach (var name in k.GetSubKeyNames())
+                    {
+                        // 登錄檔裡是小寫（VID&0001004c），比對時不分大小寫
+                        var m = System.Text.RegularExpressions.Regex.Match(name, @"VID&0001004C_PID&([0-9A-F]{4})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        if (!m.Success) continue;
+                        int pid = Convert.ToInt32(m.Groups[1].Value, 16);
+                        set.Add((ushort)(((pid & 0xFF) << 8) | (pid >> 8)));
+                    }
+                }
+            }
+            catch { }
+            return set;
+        }
+
         // 不是 AirPods 的 Proximity Pairing 廣播就回傳 null
         public static AirPodsStatus Parse(byte[] b)
         {

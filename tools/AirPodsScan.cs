@@ -16,6 +16,9 @@ namespace DJMochi
         {
             int seconds = args.Length > 0 ? int.Parse(args[0]) : 30;
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+            var paired = AirPodsParser.PairedModels();
+            Console.WriteLine("已配對的 AirPods 型號：{0}", paired.Count == 0 ? "（無）" :
+                string.Join("、", System.Linq.Enumerable.Select(paired, x => string.Format("{0}（0x{1:X4}）", AirPodsParser.ModelName(x), x))));
             var seen = new HashSet<string>();
             var gate = new object();
 
@@ -27,10 +30,10 @@ namespace DJMochi
                     lock (gate)
                     {
                         if (!seen.Add(key)) return;
-                        Console.WriteLine("{0:HH:mm:ss}  {1,-22} RSSI {2,4}  左 {3}{4}  右 {5}{6}  盒 {7}{8}  addr {9:X12}  [{10}]",
+                        Console.WriteLine("{0:HH:mm:ss} {11} {1,-22} RSSI {2,4}  左 {3}{4}  右 {5}{6}  盒 {7}{8}  addr {9:X12}  [{10}]",
                             s.Time, s.ModelName, s.Rssi,
                             L(s.Left), C(s.ChargingLeft), L(s.Right), C(s.ChargingRight), L(s.Case), C(s.ChargingCase),
-                            s.Address, s.Hex);
+                            s.Address, s.Hex, paired.Contains(s.Model) ? "[我的型號]" : "[其他]    ");
                     }
                 };
                 m.Start();
