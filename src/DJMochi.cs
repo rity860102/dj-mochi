@@ -21,6 +21,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using WinForms = System.Windows.Forms;     // 只用來做右下角通知區域圖示（NotifyIcon）
+using Drawing = System.Drawing;
 
 namespace DJMochi
 {
@@ -254,6 +256,7 @@ namespace DJMochi
         [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
         [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
         [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+        [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int pid);
         [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
     }
 
@@ -302,6 +305,11 @@ namespace DJMochi
         TextBox editBox;
         bool statusSticky;
         string pendingHideId;          // 等待二次確認隱藏的預設裝置
+
+        // 右下角通知區域
+        WinForms.NotifyIcon tray;
+        bool trayTipShown;
+        WindowState restoreState = WindowState.Normal;
         Dictionary<string, string> orig;
         readonly string namesFile;
 
@@ -336,9 +344,16 @@ namespace DJMochi
             Content = BuildUi();
 
             PreviewKeyDown += OnKey;
-            StateChanged += delegate { UpdateMaxState(); };
+            StateChanged += delegate
+            {
+                // 任何方式最小化（按鈕、工作列、Win+↓）都縮到右下角
+                if (WindowState == WindowState.Minimized) { HideToTray(); return; }
+                restoreState = WindowState;
+                UpdateMaxState();
+            };
             SourceInitialized += delegate { ApplyDwm(); };
             ContentRendered += delegate { RefreshAll(); };
+            InitTray();
         }
 
         // ---------- 外觀小工具 ----------
@@ -414,8 +429,8 @@ namespace DJMochi
             bar.Children.Add(brand);
 
             var caps = new StackPanel { Orientation = Orientation.Horizontal };
-            var minBtn = Btn("Caption"); minBtn.Content = GMin; minBtn.ToolTip = "最小化";
-            minBtn.Click += delegate { WindowState = WindowState.Minimized; };
+            var minBtn = Btn("Caption"); minBtn.Content = GMin; minBtn.ToolTip = "縮小到右下角";
+            minBtn.Click += delegate { HideToTray(); };
             maxBtn = Btn("Caption"); maxBtn.Content = GMax; maxBtn.ToolTip = "最大化";
             maxBtn.Click += delegate { WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized; };
             var closeBtn = Btn("CaptionClose"); closeBtn.Content = GClose; closeBtn.ToolTip = "關閉";
@@ -850,8 +865,95 @@ namespace DJMochi
 
         protected override void OnClosed(EventArgs e)
         {
+            if (tray != null) { tray.Visible = false; tray.Dispose(); tray = null; }   // X = 直接結束，圖示一起移除
             Audio.ClearCache();
             base.OnClosed(e);
+        }
+
+        // ---------- 右下角通知區域 ----------
+
+        void InitTray()
+        {
+            tray = new WinForms.NotifyIcon { Text = "DJ Mochi", Icon = LoadTrayIcon(), Visible = true };
+            tray.MouseClick += delegate(object s, WinForms.MouseEventArgs e)
+            {
+                if (e.Button == WinForms.MouseButtons.Left) ShowFromTray();
+            };
+            var menu = new WinForms.ContextMenuStrip();
+            menu.Opening += delegate(object s, System.ComponentModel.CancelEventArgs e)
+            {
+                BuildTrayMenu(menu);
+                e.Cancel = false;   // 選單一開始是空的，預設會被取消
+            };
+            tray.ContextMenuStrip = menu;
+        }
+
+        static Drawing.Icon LoadTrayIcon()
+        {
+            try
+            {
+                var s = typeof(MainWindow).Assembly.GetManifestResourceStream("DJMochi.mochi.ico");
+                if (s != null) using (s) return new Drawing.Icon(s, WinForms.SystemInformation.SmallIconSize);
+            }
+            catch { }
+            return Drawing.SystemIcons.Application;
+        }
+
+        void BuildTrayMenu(WinForms.ContextMenuStrip menu)
+        {
+            menu.Items.Clear();
+            var open = new WinForms.ToolStripMenuItem("開啟 DJ Mochi");
+            open.Font = new Drawing.Font(open.Font, Drawing.FontStyle.Bold);
+            open.Click += delegate { ShowFromTray(); };
+            menu.Items.Add(open);
+            menu.Items.Add(new WinForms.ToolStripSeparator());
+
+            // 不開視窗就能切換預設播放裝置
+            var sub = new WinForms.ToolStripMenuItem("預設播放裝置");
+            foreach (var d in Audio.Load(0).Where(x => x.Enabled && !x.Unplugged).OrderBy(x => x.Desc))
+            {
+                var item = new WinForms.ToolStripMenuItem(string.IsNullOrEmpty(d.Dev) ? d.Desc : d.Desc + "（" + d.Dev + "）");
+                item.Checked = d.IsDefault;
+                var dev = d;
+                item.Click += delegate
+                {
+                    if (dev.IsDefault) return;
+                    if (Audio.SetDefault(dev.Id) == 0)
+                    {
+                        foreach (var x in cache[0]) x.IsDefault = string.Equals(x.Id, dev.Id, StringComparison.OrdinalIgnoreCase);
+                        if (IsVisible) Render();
+                        tray.ShowBalloonTip(1500, "DJ Mochi", "已切換到：" + dev.Desc, WinForms.ToolTipIcon.None);
+                    }
+                };
+                sub.DropDownItems.Add(item);
+            }
+            if (sub.DropDownItems.Count == 0) sub.Enabled = false;
+            menu.Items.Add(sub);
+            menu.Items.Add(new WinForms.ToolStripSeparator());
+
+            var exit = new WinForms.ToolStripMenuItem("結束");
+            exit.Click += delegate { Close(); };
+            menu.Items.Add(exit);
+        }
+
+        void HideToTray()
+        {
+            Hide();
+            if (!trayTipShown && tray != null)
+            {
+                trayTipShown = true;
+                tray.ShowBalloonTip(2500, "DJ Mochi", "縮小到右下角了，點圖示就能叫回來 🍡", WinForms.ToolTipIcon.None);
+            }
+        }
+
+        // 從右下角叫回（也供防多開時呼叫）
+        public void ShowFromTray()
+        {
+            Show();
+            WindowState = restoreState;
+            Activate();
+            Topmost = true; Topmost = false;   // 確保跑到最前面
+            RefreshAll();                      // 縮小期間可能插拔過裝置
         }
 
         // ---------- 樣式 ----------
@@ -1085,26 +1187,38 @@ namespace DJMochi
 
     static class Program
     {
+        const string ShowEventName = @"Local\DJMochi_Show";
+
         [STAThread]
         static void Main()
         {
             bool created;
             using (var mutex = new Mutex(true, @"Local\DJMochi_SingleInstance", out created))
             {
-                // 防多開：已經開著就把原本的視窗叫到最前面
+                // 防多開：已經開著就通知它把視窗叫出來（縮在右下角時沒有視窗可找，所以用系統事件通知）
                 if (!created)
                 {
-                    var me = Process.GetCurrentProcess();
-                    foreach (var p in Process.GetProcessesByName(me.ProcessName))
+                    Native.AllowSetForegroundWindow(-1);   // 允許原本的程式搶到前景
+                    try
                     {
-                        if (p.Id == me.Id || p.MainWindowHandle == IntPtr.Zero) continue;
-                        if (Native.IsIconic(p.MainWindowHandle)) Native.ShowWindow(p.MainWindowHandle, 9);
-                        Native.SetForegroundWindow(p.MainWindowHandle);
-                        break;
+                        using (var ev = EventWaitHandle.OpenExisting(ShowEventName)) ev.Set();
+                    }
+                    catch
+                    {
+                        // 舊版沒有這個事件：退回找視窗
+                        var me = Process.GetCurrentProcess();
+                        foreach (var p in Process.GetProcessesByName(me.ProcessName))
+                        {
+                            if (p.Id == me.Id || p.MainWindowHandle == IntPtr.Zero) continue;
+                            if (Native.IsIconic(p.MainWindowHandle)) Native.ShowWindow(p.MainWindowHandle, 9);
+                            Native.SetForegroundWindow(p.MainWindowHandle);
+                            break;
+                        }
                     }
                     return;
                 }
 
+                var showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
                 var app = new Application();
                 MainWindow win = null;
                 // 全域錯誤保護：沒接住的例外只顯示在狀態列，不讓程式閃退
@@ -1115,6 +1229,18 @@ namespace DJMochi
                     MessageBox.Show(e.Exception.GetBaseException().Message, "DJ Mochi - 發生錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
                 };
                 win = new MainWindow();
+
+                // 等待其他實例的「叫出來」通知
+                var listener = new Thread(delegate()
+                {
+                    while (true)
+                    {
+                        showEvent.WaitOne();
+                        win.Dispatcher.BeginInvoke(new Action(win.ShowFromTray));
+                    }
+                }) { IsBackground = true };
+                listener.Start();
+
                 app.Run(win);
             }
         }

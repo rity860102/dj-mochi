@@ -31,6 +31,9 @@ try {
         "/out:$out" `
         "/win32icon:$icon\mochi.ico" `
         "/resource:$icon\mochi.png,DJMochi.mochi.png" `
+        "/resource:$icon\mochi.ico,DJMochi.mochi.ico" `
+        "/r:$fw\System.Windows.Forms.dll" `
+        "/r:$fw\System.Drawing.dll" `
         "/r:$fw\WPF\PresentationFramework.dll" `
         "/r:$fw\WPF\PresentationCore.dll" `
         "/r:$fw\WPF\WindowsBase.dll" `
