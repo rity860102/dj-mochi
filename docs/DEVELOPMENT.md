@@ -6,18 +6,38 @@
 dj-mochi\
 ├─ DJMochi.exe                主程式（編譯產生，不進 git）
 ├─ original-names.json        原始名稱備份（第一次改名時自動建立，不進 git）
-├─ README.md
+├─ README.md                  英文說明（GitHub 首頁）
+├─ README.zh-TW.md            繁體中文說明
 ├─ LICENSE
 ├─ .github\workflows\
 │  └─ build.yml               CI / CD
 ├─ docs\
 │  ├─ DEVELOPMENT.md          本文件
-│  └─ screenshot.png
-├─ src\
-│  ├─ DJMochi.cs              主程式（C# 5 / WPF）
-│  ├─ AirPods.cs              AirPods BLE 廣播監聽與電量解析
-│  ├─ build.ps1               編譯腳本
-│  └─ icon\
+│  ├─ screenshot.png          中文介面截圖（README.zh-TW.md）
+│  └─ screenshot-en.png       英文介面截圖（README.md）
+├─ build.ps1                  編譯腳本（編譯 src 底下所有 .cs）
+├─ src\                       C# 5 / WPF，按功能分資料夾
+│  ├─ App\
+│  │  └─ Program.cs           進入點：防多開、開機縮在右下角
+│  ├─ Core\                   共用基礎
+│  │  ├─ Lang.cs              介面文字（繁體中文 / English）與語言設定
+│  │  └─ Win32.cs             Win32 API 宣告（視窗、DWM）
+│  ├─ Features\               一個功能一個資料夾
+│  │  ├─ Devices\             裝置管理
+│  │  │  ├─ AudioInterop.cs   Windows 音訊 COM 介面（IPolicyConfig、IMMDevice、IAudioEndpointVolume）
+│  │  │  ├─ AudioDevices.cs   裝置清單與控制（顯示 / 隱藏、預設、改名、音量）
+│  │  │  └─ Device.cs         裝置資料
+│  │  ├─ AirPods\
+│  │  │  ├─ AirPodsMonitor.cs     BLE 廣播監聽與電量解析
+│  │  │  └─ MainWindow.AirPods.cs 監聽時機、篩選與電量顯示
+│  │  ├─ Tray\
+│  │  │  └─ MainWindow.Tray.cs    右下角圖示、縮小 / 叫回、語言切換
+│  │  └─ Startup\
+│  │     └─ Startup.cs        開機自動啟動（HKCU Run）
+│  ├─ UI\
+│  │  ├─ MainWindow.cs        主視窗：版面、裝置列表、顯示 / 隱藏、設為預設、重新命名
+│  │  └─ MainWindow.Styles.cs 按鈕、滑桿、捲軸等 WPF 樣式
+│  └─ Assets\
 │     ├─ make-icon.ps1        圖示繪製腳本（WPF 向量繪圖）
 │     ├─ mochi.ico            exe 與右下角圖示（16～256 px）
 │     ├─ mochi.png            程式內使用的圖示（256 px）
@@ -35,14 +55,14 @@ dj-mochi\
 
 ```powershell
 # 編譯（輸出到專案根目錄的 DJMochi.exe，版本號預設 0.0.0-dev）
-pwsh -File src\build.ps1
+pwsh -File build.ps1
 
 # 指定版本號（寫進 exe 的「內容 → 詳細資料」）
-pwsh -File src\build.ps1 -Version 1.2.0
+pwsh -File build.ps1 -Version 1.2.0
 
 # 修改圖示後，重新產生 ico / png 再編譯
-pwsh -File src\icon\make-icon.ps1
-pwsh -File src\build.ps1
+pwsh -File src\Assets\make-icon.ps1
+pwsh -File build.ps1
 
 # 測試 AirPods 廣播解析（印出附近 AirPods 的電量，藍牙位址只顯示後 4 碼）
 pwsh -File tools\airpods-scan.ps1 -Seconds 30
@@ -57,6 +77,15 @@ pwsh -File tools\airpods-scan.ps1 -Seconds 30
 - 呼叫 WinRT（藍牙 BLE）需要參考 `C:\Windows\System32\WinMetadata\*.winmd` 和 `System.Runtime.InteropServices.WindowsRuntime.dll` 等 facade，C# 5 才能用 `+=` 訂閱 WinRT 事件
 - `IBuffer` 不要用 `ToArray()`（會需要完整 Windows SDK 的 `Windows.winmd`），改用 `DataReader` 讀取
 - `make-icon.ps1` 不能用 `[ordered]@{}` 搭配整數鍵，PowerShell 會把整數當成索引
+- 新增功能時，在 `src\Features\` 開一個資料夾。`MainWindow` 是 `partial class`，功能相關的介面程式碼可以寫成 `MainWindow.<功能>.cs` 放在該功能的資料夾裡；`build.ps1` 會自動編譯子資料夾裡的所有 `.cs`
+
+### 介面文字（多語言）
+- 所有介面文字都放在 `src/Lang.cs` 的 `Table`，每筆是 `{ "key", new[] { "繁體中文", "English" } }`
+- 程式裡用 `Lang.Tr("key")` 取得目前語言的文字，有參數時用 `Lang.Tr("key", arg0, arg1)`（內部是 `string.Format`）
+- 找不到的 key 會直接顯示 key 本身，畫面上看到 `xxx.yyy` 這種文字就代表漏加翻譯
+- 語言設定存在 `HKCU\Software\DJMochi` 的 `Language`（`zh` / `en`；沒有這個值 = 自動跟隨 Windows）
+- 裝置名稱（例如「耳機」「Headphones」）是 Windows 依系統語言提供的，不經過 `Lang`
+- `MainWindow.IconFor` 裡的「麥克風」「耳機」等字是用來比對 Windows 裝置名稱、決定圖示的關鍵字，不是介面文字，不要翻譯
 
 ---
 

@@ -1,4 +1,4 @@
-# 編譯產物（用 src\build.ps1 產生；發布請放 GitHub Releases）
+# 編譯產物（用 build.ps1 產生；發布請放 GitHub Releases）
 *.exe
 *.pdb
 
@@ -6,4 +6,4 @@
 original-names.json
 
 # 圖示預覽圖（由 make-icon.ps1 產生）
-src/icon/preview.png
+src/Assets/preview.png

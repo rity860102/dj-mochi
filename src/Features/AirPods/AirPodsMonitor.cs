@@ -1,4 +1,4 @@
-// AirPods.cs — 監聽 AirPods 的 BLE 廣播並解析電量（依公開的 Apple Continuity 格式文件自行實作）
+// AirPodsMonitor.cs — 監聽 AirPods 的 BLE 廣播並解析電量（依公開的 Apple Continuity 格式文件自行實作）
 //
 // 格式（Apple 廠商 ID 0x004C，資料第 0 位元組 0x07 = Proximity Pairing）：
 //   [1] 長度  [2] 前綴  [3-4] 型號（大端序）  [5] 狀態（高 4 bit 含主耳旗標）

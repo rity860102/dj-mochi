@@ -83,7 +83,7 @@ jobs:
 
       - name: 編譯
         shell: pwsh
-        run: ./src/build.ps1 -Version '${{ steps.ver.outputs.version }}'
+        run: ./build.ps1 -Version '${{ steps.ver.outputs.version }}'
 
       - name: 計算 SHA256
         shell: pwsh
