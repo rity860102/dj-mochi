@@ -128,9 +128,9 @@ namespace DJMochi
         static string PodsSummary(AirPodsStatus s)
         {
             var parts = new List<string>();
-            if (s.Left >= 0)  parts.Add("左 " + s.Left + "%" + (s.ChargingLeft ? "⚡" : ""));
-            if (s.Right >= 0) parts.Add("右 " + s.Right + "%" + (s.ChargingRight ? "⚡" : ""));
-            if (s.Case >= 0)  parts.Add("盒 " + s.Case + "%" + (s.ChargingCase ? "⚡" : ""));
+            if (s.Left >= 0)  parts.Add(Lang.Tr("pods.left") + " " + s.Left + "%" + (s.ChargingLeft ? "⚡" : ""));
+            if (s.Right >= 0) parts.Add(Lang.Tr("pods.right") + " " + s.Right + "%" + (s.ChargingRight ? "⚡" : ""));
+            if (s.Case >= 0)  parts.Add(Lang.Tr("pods.case") + " " + s.Case + "%" + (s.ChargingCase ? "⚡" : ""));
             return string.Join("  ", parts);
         }
 
@@ -146,7 +146,7 @@ namespace DJMochi
                 {
                     text += "\n" + podsStatus.ModelName + "\n" + sum;
                     double min = (DateTime.Now - podsSeen).TotalMinutes;
-                    if (pods == null && min >= 1) text += string.Format("（{0:0} 分鐘前）", min);
+                    if (pods == null && min >= 1) text += Lang.Tr("pods.agoTray", min);
                 }
             }
             tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;   // NotifyIcon.Text 上限 63 字
@@ -161,7 +161,7 @@ namespace DJMochi
             if (low <= PodsLowLevel && !podsLowWarned)
             {
                 podsLowWarned = true;
-                if (tray != null) tray.ShowBalloonTip(4000, "AirPods 電量低", s.ModelName + "：" + PodsSummary(s), WinForms.ToolTipIcon.Warning);
+                if (tray != null) tray.ShowBalloonTip(4000, Lang.Tr("pods.lowTitle"), s.ModelName + ": " + PodsSummary(s), WinForms.ToolTipIcon.Warning);
             }
             else if (low > PodsLowLevel + 10) podsLowWarned = false;   // 充回 20% 以上才重新提醒
         }
@@ -185,16 +185,16 @@ namespace DJMochi
                 b.Child = t;
                 sp.Children.Add(b);
             };
-            add("左", s.Left, s.ChargingLeft);
-            add("右", s.Right, s.ChargingRight);
-            add("盒", s.Case, s.ChargingCase);
+            add(Lang.Tr("pods.left"), s.Left, s.ChargingLeft);
+            add(Lang.Tr("pods.right"), s.Right, s.ChargingRight);
+            add(Lang.Tr("pods.case"), s.Case, s.ChargingCase);
             if (sp.Children.Count == 0) return null;
             if (stale)
             {
-                var ago = T(string.Format("{0:0} 分鐘前", (DateTime.Now - podsSeen).TotalMinutes), 12, "#6B7079");
+                var ago = T(Lang.Tr("pods.ago", (DateTime.Now - podsSeen).TotalMinutes), 12, "#6B7079");
                 sp.Children.Add(ago);
             }
-            sp.ToolTip = "AirPods 廣播的電量精度為 10%（" + s.ModelName + "）";
+            sp.ToolTip = Lang.Tr("pods.precision", s.ModelName);
             return sp;
         }
     }

@@ -35,6 +35,7 @@ namespace DJMochi
         {
             // --tray：開機自動啟動時直接縮在右下角，不顯示視窗
             bool startInTray = args.Any(a => string.Equals(a, Startup.TrayArg, StringComparison.OrdinalIgnoreCase));
+            Lang.Load();   // 介面語言：自動跟隨 Windows，或使用者在右下角選單選的語言
             bool created;
             using (var mutex = new Mutex(true, @"Local\DJMochi_SingleInstance", out created))
             {
@@ -69,7 +70,7 @@ namespace DJMochi
                 {
                     e.Handled = true;
                     if (win != null) win.Title = "DJ Mochi";
-                    MessageBox.Show(e.Exception.GetBaseException().Message, "DJ Mochi - 發生錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(e.Exception.GetBaseException().Message, Lang.Tr("err.title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 };
                 win = new MainWindow();
 

@@ -29,14 +29,17 @@ namespace DJMochi
     partial class MainWindow : Window
     {
         static readonly FontFamily IconFont = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");
-        static readonly FontFamily TextFont = new FontFamily("Microsoft JhengHei UI");
+        static readonly FontFamily ChineseFont = new FontFamily("Microsoft JhengHei UI");
+        static readonly FontFamily EnglishFont = new FontFamily("Segoe UI");
+        static FontFamily TextFont { get { return Lang.IsEnglish ? EnglishFont : ChineseFont; } }
 
         const string GVolume = "", GMute = "", GHeadphone = "", GSpeaker = "", GMonitor = "",
                      GMic = "", GMicOff = "", GGame = "", GRefresh = "", GHidden = "",
                      GShow = "", GRight = "", GDown = "", GEdit = "", GUndo = "",
                      GMin = "", GMax = "", GRestore = "", GClose = "";
 
-        static readonly string[] TabNames = { "播放", "錄音" };
+
+
 
         // DJ Mochi 圖示（build.ps1 以 /resource 內嵌 src\icon\mochi.png）
         static readonly ImageSource Mochi = LoadMochi();
@@ -132,6 +135,7 @@ namespace DJMochi
             SourceInitialized += delegate { ApplyDwm(); };
             ContentRendered += delegate { RefreshAll(); };
             InitTray();
+            UpdateTrayText();   // 提示文字依語言設定
             // AirPods 電量只在「使用中」監聽：視窗開著，且 AirPods 是預設播放裝置
             IsVisibleChanged += delegate { UpdatePodsListening(); };
         }
@@ -209,11 +213,11 @@ namespace DJMochi
             bar.Children.Add(brand);
 
             var caps = new StackPanel { Orientation = Orientation.Horizontal };
-            var minBtn = Btn("Caption"); minBtn.Content = GMin; minBtn.ToolTip = "縮小到右下角";
+            var minBtn = Btn("Caption"); minBtn.Content = GMin; minBtn.ToolTip = Lang.Tr("cap.min");
             minBtn.Click += delegate { HideToTray(); };
-            maxBtn = Btn("Caption"); maxBtn.Content = GMax; maxBtn.ToolTip = "最大化";
+            maxBtn = Btn("Caption"); maxBtn.Content = GMax; maxBtn.ToolTip = Lang.Tr("cap.max");
             maxBtn.Click += delegate { WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized; };
-            var closeBtn = Btn("CaptionClose"); closeBtn.Content = GClose; closeBtn.ToolTip = "關閉";
+            var closeBtn = Btn("CaptionClose"); closeBtn.Content = GClose; closeBtn.ToolTip = Lang.Tr("cap.close");
             closeBtn.Click += delegate { Close(); };
             foreach (var b in new[] { minBtn, maxBtn, closeBtn })
             {
@@ -238,15 +242,15 @@ namespace DJMochi
 
             var tabsBar = new DockPanel { Margin = new Thickness(0, 20, 0, 10), LastChildFill = true };
             Grid.SetRow(tabsBar, 1);
-            tabR = Btn("Pill"); tabR.Content = "播放"; tabR.Click += delegate { SwitchTab(0); };
-            tabC = Btn("Pill"); tabC.Content = "錄音"; tabC.Click += delegate { SwitchTab(1); };
+            tabR = Btn("Pill"); tabR.Content = Lang.Tr("tab.playback"); tabR.Click += delegate { SwitchTab(0); };
+            tabC = Btn("Pill"); tabC.Content = Lang.Tr("tab.recording"); tabC.Click += delegate { SwitchTab(1); };
             DockPanel.SetDock(tabR, Dock.Left); DockPanel.SetDock(tabC, Dock.Left);
-            var refresh = Btn("Pill"); refresh.Content = IconLabel(GRefresh, "重新整理", 17);
+            var refresh = Btn("Pill"); refresh.Content = IconLabel(GRefresh, Lang.Tr("refresh"), 17);
             refresh.Margin = new Thickness(0); refresh.Padding = new Thickness(18, 10, 18, 10);
             refresh.Click += delegate { RefreshAll(); };
             DockPanel.SetDock(refresh, Dock.Right);
             startupBtn = Btn("Pill"); startupBtn.Padding = new Thickness(18, 10, 18, 10);
-            startupBtn.ToolTip = "開機時自動啟動，並直接縮在右下角";
+            startupBtn.ToolTip = Lang.Tr("startup.tip");
             startupBtn.Click += delegate { ToggleStartup(); };
             DockPanel.SetDock(startupBtn, Dock.Right);
             UpdateStartupBtn();
@@ -260,7 +264,7 @@ namespace DJMochi
             scroll.Content = rows;
             main.Children.Add(scroll);
 
-            var foot = T("拖曳或滾輪調整音量　　鉛筆：重新命名（Windows 也會顯示）　　F5：重新整理", 14, "#6B7079");
+            var foot = T(Lang.Tr("footer"), 14, "#6B7079");
             foot.Margin = new Thickness(0, 12, 0, 0);
             Grid.SetRow(foot, 3);
             main.Children.Add(foot);
@@ -283,7 +287,7 @@ namespace DJMochi
             // 最大化時 WindowChrome 會超出螢幕邊緣，補邊距
             outer.Margin = max ? new Thickness(8) : new Thickness(0);
             maxBtn.Content = max ? GRestore : GMax;
-            maxBtn.ToolTip = max ? "還原" : "最大化";
+            maxBtn.ToolTip = Lang.Tr(max ? "cap.restore" : "cap.max");
         }
 
         // ---------- 資料 ----------
@@ -336,14 +340,14 @@ namespace DJMochi
 
             if (shown.Count > 0)
             {
-                rows.Children.Add(SectionHeader("顯示中", shown.Count, showShown[tab], new Thickness(0, 0, 0, 10),
+                rows.Children.Add(SectionHeader(Lang.Tr("sec.shown"), shown.Count, showShown[tab], new Thickness(0, 0, 0, 10),
                     delegate { showShown[tab] = !showShown[tab]; Render(); }));
                 if (showShown[tab]) foreach (var d in shown) rows.Children.Add(Row(d, false));
             }
 
             if (hidden.Count > 0)
             {
-                rows.Children.Add(SectionHeader("已隱藏", hidden.Count, showHidden[tab], new Thickness(0, 14, 0, 10),
+                rows.Children.Add(SectionHeader(Lang.Tr("sec.hidden"), hidden.Count, showHidden[tab], new Thickness(0, 14, 0, 10),
                     delegate { showHidden[tab] = !showHidden[tab]; Render(); }));
                 if (showHidden[tab]) foreach (var d in hidden) rows.Children.Add(Row(d, true));
             }
@@ -405,7 +409,7 @@ namespace DJMochi
             }
 
             var edit = Btn("Round"); edit.Width = 30; edit.Height = 30; edit.FontSize = 14;
-            edit.Content = GEdit; edit.ToolTip = "重新命名"; edit.Margin = new Thickness(6, 0, 0, 0); edit.Foreground = B("#8A8F98");
+            edit.Content = GEdit; edit.ToolTip = Lang.Tr("rename"); edit.Margin = new Thickness(6, 0, 0, 0); edit.Foreground = B("#8A8F98");
             var dEdit = d; var lineRef = line; var titleRef = title;
             edit.Click += delegate { StartRename(dEdit, lineRef, titleRef); };
             line.Children.Add(edit);
@@ -414,15 +418,15 @@ namespace DJMochi
             if (orig.TryGetValue(d.Id, out o) && o != d.Desc)
             {
                 var undo = Btn("Round"); undo.Width = 30; undo.Height = 30; undo.FontSize = 14;
-                undo.Content = GUndo; undo.ToolTip = "還原成「" + o + "」"; undo.Foreground = B("#8A8F98");
+                undo.Content = GUndo; undo.ToolTip = Lang.Tr("rename.restore", o); undo.Foreground = B("#8A8F98");
                 var dUndo = d; var oName = o;
                 undo.Click += delegate { Rename(dUndo, oName); };
                 line.Children.Add(undo);
             }
 
-            if (d.IsDefault) line.Children.Add(Badge("預設", "#107C10", "#FFFFFF"));
-            if (d.IsVirtual) line.Children.Add(Badge("虛擬", "#3A3F4B", "#C9CDD4"));
-            if (d.Unplugged) line.Children.Add(Badge("未接上", "#5A4A1E", "#F2D27A"));
+            if (d.IsDefault) line.Children.Add(Badge(Lang.Tr("badge.default"), "#107C10", "#FFFFFF"));
+            if (d.IsVirtual) line.Children.Add(Badge(Lang.Tr("badge.virtual"), "#3A3F4B", "#C9CDD4"));
+            if (d.Unplugged) line.Children.Add(Badge(Lang.Tr("badge.unplugged"), "#5A4A1E", "#F2D27A"));
             info.Children.Add(line);
             if (!compact && !string.IsNullOrEmpty(d.Dev))
             {
@@ -479,7 +483,7 @@ namespace DJMochi
             // 3：設為預設
             if (d.Enabled && !d.IsDefault && !d.Unplugged)
             {
-                var def = Btn("Mini"); def.Content = "設為預設"; def.VerticalAlignment = VerticalAlignment.Center; def.Margin = new Thickness(0, 0, 10, 0);
+                var def = Btn("Mini"); def.Content = Lang.Tr("setDefault"); def.VerticalAlignment = VerticalAlignment.Center; def.Margin = new Thickness(0, 0, 10, 0);
                 var dDef = d;
                 def.Click += delegate { SetDefault(dDef); };
                 Grid.SetColumn(def, 3);
@@ -492,9 +496,9 @@ namespace DJMochi
             {
                 // 預設裝置的二次確認：灰色「取消」+ 紅色「確認隱藏？」
                 var confirmPanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-                var cancel = Btn("Ghost"); cancel.Content = "取消"; cancel.Margin = new Thickness(0, 0, 8, 0);
+                var cancel = Btn("Ghost"); cancel.Content = Lang.Tr("cancel"); cancel.Margin = new Thickness(0, 0, 8, 0);
                 cancel.Click += delegate { pendingHideId = null; Render(); };
-                var confirm = Btn("Danger"); confirm.Content = IconLabel(GHidden, "確認隱藏？", 14);
+                var confirm = Btn("Danger"); confirm.Content = IconLabel(GHidden, Lang.Tr("confirmHide"), 14);
                 confirm.Click += delegate { Toggle(dTg, true); };
                 confirmPanel.Children.Add(cancel); confirmPanel.Children.Add(confirm);
                 Grid.SetColumn(confirmPanel, 4);
@@ -503,7 +507,7 @@ namespace DJMochi
             else
             {
                 var tg = Btn("Mini"); tg.VerticalAlignment = VerticalAlignment.Center; tg.MinWidth = 96;
-                tg.Content = d.Enabled ? IconLabel(GHidden, "隱藏", 14) : IconLabel(GShow, "顯示", 14);
+                tg.Content = d.Enabled ? IconLabel(GHidden, Lang.Tr("hide"), 14) : IconLabel(GShow, Lang.Tr("show"), 14);
                 tg.Click += delegate { Toggle(dTg, false); };
                 Grid.SetColumn(tg, 4);
                 grid.Children.Add(tg);
@@ -517,7 +521,7 @@ namespace DJMochi
         {
             b.Content = d.Flow == 1 ? (muted ? GMicOff : GMic) : (muted ? GMute : GVolume);
             b.Foreground = B(muted ? "#E05A5A" : "#E6E8EB");
-            b.ToolTip = muted ? "取消靜音" : "靜音";
+            b.ToolTip = Lang.Tr(muted ? "unmute" : "mute");
         }
 
         // ---------- 動作 ----------
@@ -528,7 +532,7 @@ namespace DJMochi
             {
                 if (d.Enabled && d.Flow == 0 && !cache[0].Any(x => x.Enabled && x.Id != d.Id))
                 {
-                    SetStatus("播放裝置至少要保留一個顯示。");
+                    SetStatus(Lang.Tr("st.keepOne"));
                     Render();
                     return;
                 }
@@ -536,13 +540,13 @@ namespace DJMochi
                 if (d.Enabled && d.IsDefault && !confirmed)
                 {
                     pendingHideId = d.Id;
-                    SetStatus("「" + d.Desc + "」是預設裝置，隱藏後 Windows 會改用其他裝置。");
+                    SetStatus(Lang.Tr("st.defaultWarn", d.Desc));
                     Render();
                     return;
                 }
                 pendingHideId = null;
                 int hr = Audio.SetVisibility(d.Id, !d.Enabled);
-                if (hr != 0) throw new Exception(string.Format("{0} 設定失敗 (HRESULT 0x{1:X8})", d.Name, hr));
+                if (hr != 0) throw new Exception(Lang.Tr("err.visibility", d.Name, hr));
                 d.Enabled = !d.Enabled;
                 // 隱藏的若是預設裝置，Windows 會自動換一個預設
                 if (!d.Enabled && d.IsDefault)
@@ -550,7 +554,7 @@ namespace DJMochi
                     string def = Audio.GetDefault(d.Flow);
                     foreach (var x in cache[d.Flow]) x.IsDefault = def != null && string.Equals(x.Id, def, StringComparison.OrdinalIgnoreCase);
                 }
-                SetStatus((d.Enabled ? "已顯示：" : "已隱藏：") + d.Name);
+                SetStatus(Lang.Tr(d.Enabled ? "st.shown" : "st.hidden", d.Name));
             }
             catch (Exception ex) { SetStatus(ex.Message); }
             Render();
@@ -562,9 +566,9 @@ namespace DJMochi
             try
             {
                 int hr = Audio.SetDefault(d.Id);
-                if (hr != 0) throw new Exception(string.Format("設為預設失敗 (HRESULT 0x{0:X8})", hr));
+                if (hr != 0) throw new Exception(Lang.Tr("err.default", hr));
                 foreach (var x in cache[d.Flow]) x.IsDefault = x.Id == d.Id;
-                SetStatus("已設為預設：" + d.Name);
+                SetStatus(Lang.Tr("st.defaultSet", d.Name));
             }
             catch (Exception ex) { SetStatus(ex.Message); }
             Render();
@@ -588,7 +592,7 @@ namespace DJMochi
                 Text = d.Desc, FontSize = 18, MinWidth = 240, Padding = new Thickness(6, 3, 6, 3),
                 Background = B("#0E1014"), Foreground = Brushes.White, CaretBrush = Brushes.White,
                 BorderBrush = B("#107C10"), BorderThickness = new Thickness(2), FontFamily = TextFont,
-                ToolTip = "Enter 儲存、Esc 取消；清空後儲存 = 還原原始名稱", Tag = d
+                ToolTip = Lang.Tr("rename.tip"), Tag = d
             };
             line.Children.RemoveAt(idx);
             line.Children.Insert(idx, tb);
@@ -621,10 +625,10 @@ namespace DJMochi
             {
                 if (!hasOrig) { orig[d.Id] = d.Desc; SaveNames(); }
                 int hr = Audio.SetName(d.Id, newName);
-                if (hr != 0) throw new Exception(string.Format("重新命名失敗 (HRESULT 0x{0:X8})", hr));
+                if (hr != 0) throw new Exception(Lang.Tr("err.rename", hr));
                 string old = d.Desc;
                 d.Desc = newName;
-                SetStatus("已重新命名：" + old + " → " + newName);
+                SetStatus(Lang.Tr("st.renamed", old, newName));
             }
             catch (Exception ex) { SetStatus(ex.Message); }
             Render();
@@ -647,7 +651,7 @@ namespace DJMochi
         void SaveNames()
         {
             try { File.WriteAllText(namesFile, new JavaScriptSerializer().Serialize(orig), new UTF8Encoding(false)); }
-            catch (Exception ex) { SetStatus("無法儲存原始名稱備份：" + ex.Message); }
+            catch (Exception ex) { SetStatus(Lang.Tr("err.saveNames", ex.Message)); }
         }
 
         void OnKey(object sender, KeyEventArgs e)

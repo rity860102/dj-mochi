@@ -21,6 +21,7 @@ dj-mochi\
 │  ├─ MainWindow.Styles.cs    按鈕、滑桿、捲軸等 WPF 樣式
 │  ├─ Audio.cs                音訊裝置清單與控制（顯示 / 隱藏、預設、改名、音量）
 │  ├─ Startup.cs              開機自動啟動（HKCU Run）
+│  ├─ Lang.cs                 介面文字（繁體中文 / English）與語言設定
 │  ├─ Interop.cs              Windows COM 介面與 Win32 API 宣告
 │  ├─ AirPods.cs              AirPods BLE 廣播監聽與電量解析
 │  ├─ build.ps1               編譯腳本
@@ -64,6 +65,14 @@ pwsh -File tools\airpods-scan.ps1 -Seconds 30
 - 呼叫 WinRT（藍牙 BLE）需要參考 `C:\Windows\System32\WinMetadata\*.winmd` 和 `System.Runtime.InteropServices.WindowsRuntime.dll` 等 facade，C# 5 才能用 `+=` 訂閱 WinRT 事件
 - `IBuffer` 不要用 `ToArray()`（會需要完整 Windows SDK 的 `Windows.winmd`），改用 `DataReader` 讀取
 - `make-icon.ps1` 不能用 `[ordered]@{}` 搭配整數鍵，PowerShell 會把整數當成索引
+
+### 介面文字（多語言）
+- 所有介面文字都放在 `src/Lang.cs` 的 `Table`，每筆是 `{ "key", new[] { "繁體中文", "English" } }`
+- 程式裡用 `Lang.Tr("key")` 取得目前語言的文字，有參數時用 `Lang.Tr("key", arg0, arg1)`（內部是 `string.Format`）
+- 找不到的 key 會直接顯示 key 本身，畫面上看到 `xxx.yyy` 這種文字就代表漏加翻譯
+- 語言設定存在 `HKCU\Software\DJMochi` 的 `Language`（`zh` / `en`；沒有這個值 = 自動跟隨 Windows）
+- 裝置名稱（例如「耳機」「Headphones」）是 Windows 依系統語言提供的，不經過 `Lang`
+- `MainWindow.IconFor` 裡的「麥克風」「耳機」等字是用來比對 Windows 裝置名稱、決定圖示的關鍵字，不是介面文字，不要翻譯
 
 ---
 

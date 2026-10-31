@@ -59,14 +59,14 @@ namespace DJMochi
         void BuildTrayMenu(WinForms.ContextMenuStrip menu)
         {
             menu.Items.Clear();
-            var open = new WinForms.ToolStripMenuItem("開啟 DJ Mochi");
+            var open = new WinForms.ToolStripMenuItem(Lang.Tr("tray.open"));
             open.Font = new Drawing.Font(open.Font, Drawing.FontStyle.Bold);
             open.Click += delegate { ShowFromTray(); };
             menu.Items.Add(open);
             menu.Items.Add(new WinForms.ToolStripSeparator());
 
             // 不開視窗就能切換預設播放裝置
-            var sub = new WinForms.ToolStripMenuItem("預設播放裝置");
+            var sub = new WinForms.ToolStripMenuItem(Lang.Tr("tray.default"));
             foreach (var d in Audio.Load(0).Where(x => x.Enabled && !x.Unplugged).OrderBy(x => x.Desc))
             {
                 var item = new WinForms.ToolStripMenuItem(string.IsNullOrEmpty(d.Dev) ? d.Desc : d.Desc + "（" + d.Dev + "）");
@@ -79,7 +79,7 @@ namespace DJMochi
                     {
                         foreach (var x in cache[0]) x.IsDefault = string.Equals(x.Id, dev.Id, StringComparison.OrdinalIgnoreCase);
                         if (IsVisible) Render();
-                        tray.ShowBalloonTip(1500, "DJ Mochi", "已切換到：" + dev.Desc, WinForms.ToolTipIcon.None);
+                        tray.ShowBalloonTip(1500, "DJ Mochi", Lang.Tr("tray.switched", dev.Desc), WinForms.ToolTipIcon.None);
                     }
                 };
                 sub.DropDownItems.Add(item);
@@ -88,15 +88,41 @@ namespace DJMochi
             menu.Items.Add(sub);
             menu.Items.Add(new WinForms.ToolStripSeparator());
 
-            var auto = new WinForms.ToolStripMenuItem("開機時自動啟動");
+            var auto = new WinForms.ToolStripMenuItem(Lang.Tr("tray.startup"));
             auto.Checked = Startup.IsEnabled();
             auto.Click += delegate { ToggleStartup(); };
             menu.Items.Add(auto);
+
+            // 語言：自動 / 繁體中文 / English（選了立刻生效）
+            var lang = new WinForms.ToolStripMenuItem(Lang.Tr("tray.language"));
+            foreach (var opt in new[] {
+                new KeyValuePair<LangMode, string>(LangMode.Auto, Lang.Tr("lang.auto")),
+                new KeyValuePair<LangMode, string>(LangMode.Chinese, "繁體中文"),
+                new KeyValuePair<LangMode, string>(LangMode.English, "English") })
+            {
+                var item = new WinForms.ToolStripMenuItem(opt.Value) { Checked = Lang.Mode == opt.Key };
+                var mode = opt.Key;
+                item.Click += delegate { SwitchLanguage(mode); };
+                lang.DropDownItems.Add(item);
+            }
+            menu.Items.Add(lang);
             menu.Items.Add(new WinForms.ToolStripSeparator());
 
-            var exit = new WinForms.ToolStripMenuItem("結束");
+            var exit = new WinForms.ToolStripMenuItem(Lang.Tr("tray.exit"));
             exit.Click += delegate { Close(); };
             menu.Items.Add(exit);
+        }
+
+        // 切換語言：重建整個畫面（標題列、按鈕、列表都會換成新語言）
+        void SwitchLanguage(LangMode mode)
+        {
+            Lang.Set(mode);
+            FontFamily = TextFont;
+            Content = BuildUi();
+            UpdateMaxState();
+            UpdateTrayText();
+            SetStatus(Lang.Tr("st.language"));
+            Render();
         }
 
         void ToggleStartup()
@@ -105,9 +131,9 @@ namespace DJMochi
             {
                 bool on = !Startup.IsEnabled();
                 Startup.SetEnabled(on);
-                SetStatus(on ? "已加入開機自動啟動（工作管理員 →「啟動應用程式」）" : "已取消開機自動啟動");
+                SetStatus(Lang.Tr(on ? "st.startupAdded" : "st.startupRemoved"));
             }
-            catch (Exception ex) { SetStatus("設定開機啟動失敗：" + ex.Message); }
+            catch (Exception ex) { SetStatus(Lang.Tr("err.startup", ex.Message)); }
             UpdateStartupBtn();
             if (IsVisible) Render();
         }
@@ -116,7 +142,7 @@ namespace DJMochi
         {
             bool on = false;
             try { on = Startup.IsEnabled(); } catch { }
-            startupBtn.Content = IconLabel(GPower, on ? "開機啟動：開" : "開機啟動：關", 17);
+            startupBtn.Content = IconLabel(GPower, Lang.Tr(on ? "startup.on" : "startup.off"), 17);
             startupBtn.Background = B(on ? "#107C10" : "#1B1E25");
             startupBtn.Foreground = B(on ? "#FFFFFF" : "#C9CDD4");
             startupBtn.Margin = new Thickness(0, 0, 12, 0);
@@ -128,7 +154,7 @@ namespace DJMochi
             if (!trayTipShown && tray != null)
             {
                 trayTipShown = true;
-                tray.ShowBalloonTip(2500, "DJ Mochi", "縮小到右下角了，點圖示就能叫回來 🍡", WinForms.ToolTipIcon.None);
+                tray.ShowBalloonTip(2500, "DJ Mochi", Lang.Tr("tray.minimized"), WinForms.ToolTipIcon.None);
             }
         }
 
