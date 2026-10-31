@@ -410,8 +410,8 @@ namespace DJMochi
             SourceInitialized += delegate { ApplyDwm(); };
             ContentRendered += delegate { RefreshAll(); };
             InitTray();
-            // AirPods 電量只在視窗顯示時監聽；縮到右下角或關閉就停止，平常不在背景掃描
-            IsVisibleChanged += delegate { if (IsVisible) StartPods(); else StopPods(); };
+            // AirPods 電量只在「使用中」監聽：視窗開著，且 AirPods 是預設播放裝置
+            IsVisibleChanged += delegate { UpdatePodsListening(); };
         }
 
         // ---------- 外觀小工具 ----------
@@ -632,6 +632,9 @@ namespace DJMochi
             // 狀態列只顯示操作結果，平常留空
             if (!statusSticky) status.Text = "";
             statusSticky = false;
+
+            // 預設裝置或可見狀態可能改變了（設為預設、隱藏、右下角切換…），重新判斷要不要監聽 AirPods
+            UpdatePodsListening();
         }
 
         Button SectionHeader(string text, int count, bool open, Thickness margin, RoutedEventHandler onClick)
@@ -704,7 +707,7 @@ namespace DJMochi
                 var sub = T(d.Dev, 13, "#8A8F98"); sub.Margin = new Thickness(0, 1, 0, 0);
                 info.Children.Add(sub);
             }
-            if (!compact && podsStatus != null && d.Dev != null && d.Dev.IndexOf("AirPods", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (!compact && podsStatus != null && d.IsDefault && IsAirPods(d))
             {
                 var bat = PodsBattery();
                 if (bat != null) info.Children.Add(bat);
@@ -1014,7 +1017,23 @@ namespace DJMochi
 
         // ---------- AirPods 電量 ----------
 
-        // 只在視窗顯示（使用中）時監聽；縮到右下角或關閉就停止，也不重試
+        // 使用中才監聽：視窗開著，且預設播放裝置是 AirPods（被隱藏的裝置不會是預設）
+        static bool IsAirPods(Device d)
+        {
+            return d.Dev != null && d.Dev.IndexOf("AirPods", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        bool ShouldListenPods()
+        {
+            return IsVisible && cache[0].Any(d => d.IsDefault && d.Enabled && IsAirPods(d));
+        }
+
+        void UpdatePodsListening()
+        {
+            if (ShouldListenPods()) StartPods(); else StopPods();
+        }
+
+        // 停止監聽，也不重試
         void StopPods()
         {
             if (podsRetry != null) podsRetry.Stop();
@@ -1024,7 +1043,7 @@ namespace DJMochi
 
         void StartPods()
         {
-            if (pods != null || !IsVisible) return;
+            if (pods != null || !ShouldListenPods()) return;
             podsModels = AirPodsParser.PairedModels();   // 每次重讀：執行中才配對的新 AirPods 也能被接受
             var m = new AirPodsMonitor();
             pods = m;
@@ -1044,11 +1063,11 @@ namespace DJMochi
             catch { RetryPodsLater(); }   // 沒有藍牙或不支援 BLE
         }
 
-        // 監聽中斷（例如藍牙被關掉）：30 秒後重試，只在視窗還開著時
+        // 監聽中斷（例如藍牙被關掉）：30 秒後重試，只在仍然「使用中」時
         void RetryPodsLater()
         {
             if (pods != null) { pods.Dispose(); pods = null; }
-            if (!IsVisible) return;
+            if (!ShouldListenPods()) return;
             if (podsRetry == null)
             {
                 podsRetry = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
