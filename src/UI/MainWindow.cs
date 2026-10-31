@@ -70,8 +70,16 @@ namespace DJMochi
         readonly bool[] showHidden = new bool[2];             // 已隱藏：預設收合
         readonly bool[] showShown = new bool[] { true, true }; // 顯示中：預設展開
         TextBox editBox;
-        bool statusSticky;
+        DateTime statusUntil;          // 狀態訊息顯示到這個時間（自動更新重畫時不會被洗掉）
         string pendingHideId;          // 等待二次確認隱藏的預設裝置
+
+        // 自動偵測變化（取代 F5）
+        DeviceWatcher watcher;
+        DispatcherTimer deviceRefresh;  // 合併短時間內的多個裝置通知
+        // 目前畫面上每個裝置的音量控制項，外部改音量時直接更新，不重畫整個列表
+        class VolumeControls { public Slider Slider; public TextBlock Pct; public Button Mute; public Device Dev; }
+        readonly Dictionary<string, VolumeControls> volumeControls = new Dictionary<string, VolumeControls>(StringComparer.OrdinalIgnoreCase);
+        bool syncingVolume;             // 程式在同步外部音量時，滑桿的 ValueChanged 不要再回寫
 
         Button startupBtn;
         const string GPower = "";
@@ -124,7 +132,6 @@ namespace DJMochi
             Resources.MergedDictionaries.Add((ResourceDictionary)XamlReader.Parse(StylesXaml));
             Content = BuildUi();
 
-            PreviewKeyDown += OnKey;
             StateChanged += delegate
             {
                 // 任何方式最小化（按鈕、工作列、Win+↓）都縮到右下角
@@ -138,6 +145,8 @@ namespace DJMochi
             UpdateTrayText();   // 提示文字依語言設定
             // AirPods 電量只在「使用中」監聽：視窗開著，且 AirPods 是預設播放裝置
             IsVisibleChanged += delegate { UpdatePodsListening(); };
+            // 裝置、預設、名稱、音量有變化時自動更新（不需要手動重新整理）
+            StartWatching();
         }
 
         // ---------- 外觀小工具 ----------
@@ -245,17 +254,13 @@ namespace DJMochi
             tabR = Btn("Pill"); tabR.Content = Lang.Tr("tab.playback"); tabR.Click += delegate { SwitchTab(0); };
             tabC = Btn("Pill"); tabC.Content = Lang.Tr("tab.recording"); tabC.Click += delegate { SwitchTab(1); };
             DockPanel.SetDock(tabR, Dock.Left); DockPanel.SetDock(tabC, Dock.Left);
-            var refresh = Btn("Pill"); refresh.Content = IconLabel(GRefresh, Lang.Tr("refresh"), 17);
-            refresh.Margin = new Thickness(0); refresh.Padding = new Thickness(18, 10, 18, 10);
-            refresh.Click += delegate { RefreshAll(); };
-            DockPanel.SetDock(refresh, Dock.Right);
             startupBtn = Btn("Pill"); startupBtn.Padding = new Thickness(18, 10, 18, 10);
             startupBtn.ToolTip = Lang.Tr("startup.tip");
             startupBtn.Click += delegate { ToggleStartup(); };
             DockPanel.SetDock(startupBtn, Dock.Right);
             UpdateStartupBtn();
             status = T("", 15, "#8A8F98"); status.Margin = new Thickness(16, 0, 16, 0);
-            tabsBar.Children.Add(tabR); tabsBar.Children.Add(tabC); tabsBar.Children.Add(refresh); tabsBar.Children.Add(startupBtn); tabsBar.Children.Add(status);
+            tabsBar.Children.Add(tabR); tabsBar.Children.Add(tabC); tabsBar.Children.Add(startupBtn); tabsBar.Children.Add(status);
             main.Children.Add(tabsBar);
 
             var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Focusable = false };
@@ -311,7 +316,66 @@ namespace DJMochi
         void SetStatus(string msg)
         {
             status.Text = msg;
-            statusSticky = true;
+            statusUntil = DateTime.Now.AddSeconds(4);
+            // 4 秒後自動清掉（即使這段時間沒有重畫）
+            if (statusTimer == null)
+            {
+                statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+                statusTimer.Tick += delegate { statusTimer.Stop(); if (DateTime.Now >= statusUntil) status.Text = ""; };
+            }
+            statusTimer.Stop(); statusTimer.Start();
+        }
+        DispatcherTimer statusTimer;
+
+        // ---------- 自動偵測變化 ----------
+
+        void StartWatching()
+        {
+            try
+            {
+                watcher = new DeviceWatcher();
+                // 通知在背景執行緒進來，切回 UI 執行緒再處理
+                watcher.Changed += delegate { Dispatcher.BeginInvoke(new Action(ScheduleDeviceRefresh)); };
+                watcher.Start();
+            }
+            catch { watcher = null; }   // 取不到通知就只是不會自動更新，不影響其他功能
+            Audio.VolumeChanged += delegate(string id, float vol, bool muted)
+            {
+                Dispatcher.BeginInvoke(new Action(delegate { ApplyExternalVolume(id, vol, muted); }));
+            };
+        }
+
+        // 插拔耳機時 Windows 會連發好幾個通知：等 0.4 秒沒有新通知再更新一次
+        void ScheduleDeviceRefresh()
+        {
+            if (deviceRefresh == null)
+            {
+                deviceRefresh = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                deviceRefresh.Tick += delegate
+                {
+                    // 使用者正在改名或拖曳滑桿時先不要重畫，等操作完再更新
+                    if (editBox != null || Mouse.LeftButton == MouseButtonState.Pressed) return;
+                    deviceRefresh.Stop();
+                    RefreshAll();
+                };
+            }
+            deviceRefresh.Stop();
+            deviceRefresh.Start();
+        }
+
+        // 外部改了音量 / 靜音：只更新那一列的滑桿、數字與靜音圖示
+        void ApplyExternalVolume(string id, float vol, bool muted)
+        {
+            VolumeControls c;
+            if (!volumeControls.TryGetValue(id, out c)) return;
+            syncingVolume = true;
+            try
+            {
+                c.Slider.Value = Math.Round(vol * 100);
+                c.Pct.Text = ((int)c.Slider.Value).ToString();
+                UpdateMute(c.Mute, c.Dev, muted);
+            }
+            finally { syncingVolume = false; }
         }
 
         string IconFor(Device d)
@@ -334,6 +398,7 @@ namespace DJMochi
         {
             editBox = null;
             rows.Children.Clear();
+            volumeControls.Clear();   // Row() 會重新登記畫面上的音量控制項
             var devs = cache[tab];
             var shown = devs.Where(d => d.Enabled).OrderBy(d => !d.IsDefault).ThenBy(d => d.Unplugged).ThenBy(d => d.Desc).ToList();
             var hidden = devs.Where(d => !d.Enabled).OrderBy(d => d.Desc).ToList();
@@ -355,9 +420,8 @@ namespace DJMochi
             tabR.Background = B(tab == 0 ? "#107C10" : "#1B1E25"); tabR.Foreground = B(tab == 0 ? "#FFFFFF" : "#C9CDD4");
             tabC.Background = B(tab == 1 ? "#107C10" : "#1B1E25"); tabC.Foreground = B(tab == 1 ? "#FFFFFF" : "#C9CDD4");
 
-            // 狀態列只顯示操作結果，平常留空
-            if (!statusSticky) status.Text = "";
-            statusSticky = false;
+            // 狀態列只顯示操作結果（顯示 4 秒），平常留空
+            if (DateTime.Now > statusUntil) status.Text = "";
 
             // 預設裝置或可見狀態可能改變了（設為預設、隱藏、右下角切換…），重新判斷要不要監聽 AirPods
             UpdatePodsListening();
@@ -460,9 +524,10 @@ namespace DJMochi
                     slider.ValueChanged += delegate(object s, RoutedPropertyChangedEventArgs<double> e)
                     {
                         int v = (int)Math.Round(e.NewValue);
-                        Audio.SetVolume(id, v / 100f);
                         pct.Text = v.ToString();
+                        if (!syncingVolume) Audio.SetVolume(id, v / 100f);   // 同步外部音量時不要回寫
                     };
+                    volumeControls[id] = new VolumeControls { Slider = slider, Pct = pct, Mute = mute, Dev = d };
                     slider.PreviewMouseWheel += delegate(object s, MouseWheelEventArgs e)
                     {
                         slider.Value = Math.Max(0, Math.Min(100, slider.Value + (e.Delta > 0 ? 2 : -2)));
@@ -654,14 +719,10 @@ namespace DJMochi
             catch (Exception ex) { SetStatus(Lang.Tr("err.saveNames", ex.Message)); }
         }
 
-        void OnKey(object sender, KeyEventArgs e)
-        {
-            if (Keyboard.FocusedElement is TextBox) return;   // 正在輸入名稱時不攔截
-            if (e.Key == Key.F5) { RefreshAll(); e.Handled = true; }
-        }
-
         protected override void OnClosed(EventArgs e)
         {
+            if (deviceRefresh != null) deviceRefresh.Stop();
+            if (watcher != null) { watcher.Dispose(); watcher = null; }
             if (tray != null) { tray.Visible = false; tray.Dispose(); tray = null; }   // X = 直接結束，圖示一起移除
             if (pods != null) { pods.Dispose(); pods = null; }
             Audio.ClearCache();

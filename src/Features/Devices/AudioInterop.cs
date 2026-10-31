@@ -67,6 +67,26 @@ namespace DJMochi
         [PreserveSig] int EnumAudioEndpoints(int flow, int mask, out IntPtr col);
         [PreserveSig] int GetDefaultAudioEndpoint(int flow, int role, out IMMDevice dev);
         [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice dev);
+        [PreserveSig] int RegisterEndpointNotificationCallback(IMMNotificationClient client);
+        [PreserveSig] int UnregisterEndpointNotificationCallback(IMMNotificationClient client);
+    }
+
+    // 裝置變化通知（插拔、啟用 / 停用、預設裝置、屬性如名稱）。在背景執行緒呼叫
+    [ComImport, Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IMMNotificationClient
+    {
+        [PreserveSig] int OnDeviceStateChanged([MarshalAs(UnmanagedType.LPWStr)] string id, int state);
+        [PreserveSig] int OnDeviceAdded([MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnDeviceRemoved([MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnDefaultDeviceChanged(int flow, int role, [MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnPropertyValueChanged([MarshalAs(UnmanagedType.LPWStr)] string id, PROPERTYKEY key);
+    }
+
+    // 音量 / 靜音變化通知。在背景執行緒呼叫，參數指向 AUDIO_VOLUME_NOTIFICATION_DATA
+    [ComImport, Guid("657804FA-D6AD-4496-8A60-352752AF4F89"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioEndpointVolumeCallback
+    {
+        [PreserveSig] int OnNotify(IntPtr data);
     }
 
     [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
@@ -75,8 +95,8 @@ namespace DJMochi
     [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IAudioEndpointVolume
     {
-        [PreserveSig] int RegisterControlChangeNotify(IntPtr n);
-        [PreserveSig] int UnregisterControlChangeNotify(IntPtr n);
+        [PreserveSig] int RegisterControlChangeNotify(IAudioEndpointVolumeCallback n);
+        [PreserveSig] int UnregisterControlChangeNotify(IAudioEndpointVolumeCallback n);
         [PreserveSig] int GetChannelCount(out uint c);
         [PreserveSig] int SetMasterVolumeLevel(float db, ref Guid ctx);
         [PreserveSig] int SetMasterVolumeLevelScalar(float v, ref Guid ctx);

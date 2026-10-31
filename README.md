@@ -26,6 +26,7 @@ A lightweight audio device manager for Windows. Hide the devices you never use, 
 - **Set default**: switch the default output or input device in one click
 - **Volume / mute**: every device gets its own volume slider; scroll the mouse wheel for fine control
 - **Rename**: new names **also show up in the Windows sound menu**. The original name is backed up so you can restore it anytime
+- **Updates automatically**: plug in headphones or change the volume elsewhere and DJ Mochi follows along, no refresh button needed
 
 ### 🎧 AirPods battery
 - When your AirPods are the default playback device, their row shows the **left, right and case** battery levels, with ⚡ while charging
@@ -71,9 +72,8 @@ A lightweight audio device manager for Windows. Hide the devices you never use, 
 | Restore the original name | Click the restore button next to the name, or save an empty name |
 | Start with Windows | Click "Startup" at the top right |
 | Change language | Right-click the notification area icon → "Language / 語言" |
-| Refresh | Press F5, or click "Refresh" |
 
-> If you change devices in Windows Settings or another app, or plug / unplug headphones, press **F5** to refresh.
+> No need to refresh: plugging / unplugging headphones, or changing devices and volume in Windows Settings or another app, shows up automatically.
 
 ---
 
