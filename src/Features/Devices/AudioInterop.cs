@@ -1,4 +1,4 @@
-// Interop.cs — Windows COM 介面（IPolicyConfig、IMMDevice、IAudioEndpointVolume）與 Win32 API
+// AudioInterop.cs — Windows 音訊 COM 介面（IPolicyConfig、IMMDevice、IAudioEndpointVolume）
 
 using System;
 using System.Collections.Generic;
@@ -90,12 +90,4 @@ namespace DJMochi
         [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool m);
     }
 
-    static class Native
-    {
-        [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
-        [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
-        [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
-        [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int pid);
-        [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
-    }
 }

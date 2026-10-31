@@ -41,7 +41,7 @@ namespace DJMochi
 
 
 
-        // DJ Mochi 圖示（build.ps1 以 /resource 內嵌 src\icon\mochi.png）
+        // DJ Mochi 圖示（build.ps1 以 /resource 內嵌 src\Assets\mochi.png）
         static readonly ImageSource Mochi = LoadMochi();
         static ImageSource LoadMochi()
         {

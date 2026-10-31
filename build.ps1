@@ -1,15 +1,16 @@
 # 用 Windows 內建的 .NET Framework 4.8 C# 編譯器建置 DJMochi.exe（不需要安裝任何東西）
-#   pwsh -File src\build.ps1                    本機開發（版本 0.0.0-dev）
-#   pwsh -File src\build.ps1 -Version 1.2.0     指定版本（CI 依 tag 自動帶入）
+#   pwsh -File build.ps1                    本機開發（版本 0.0.0-dev）
+#   pwsh -File build.ps1 -Version 1.2.0     指定版本（CI 依 tag 自動帶入）
 param(
     [string]$Version = '0.0.0-dev'
 )
 $ErrorActionPreference = 'Stop'
 $fw   = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319'
 $wm   = 'C:\Windows\System32\WinMetadata'   # WinRT 中繼資料（AirPods 藍牙 BLE 廣播用）
-$src  = @(Get-ChildItem $PSScriptRoot -Filter *.cs | ForEach-Object FullName)   # src 底下所有原始碼
-$icon = Join-Path $PSScriptRoot 'icon'
-$out  = Join-Path (Split-Path $PSScriptRoot -Parent) 'DJMochi.exe'
+$srcDir = Join-Path $PSScriptRoot 'src'
+$src  = @(Get-ChildItem $srcDir -Filter *.cs -Recurse | ForEach-Object FullName)   # src 底下（含子資料夾）所有原始碼
+$icon = Join-Path $srcDir 'Assets'
+$out  = Join-Path $PSScriptRoot 'DJMochi.exe'
 
 # 版本資訊（顯示在 exe 的「內容 → 詳細資料」）
 # AssemblyVersion 只能是數字，例如 1.2.0；完整字串（含 -dev、+commit）放 InformationalVersion

@@ -11,7 +11,7 @@ $out = Join-Path ([IO.Path]::GetTempPath()) 'DJMochi.AirPodsScan.exe'
 & "$fw\csc.exe" /nologo /target:exe /platform:x64 /codepage:65001 "/out:$out" `
     "/r:$wm\Windows.Devices.winmd" "/r:$wm\Windows.Foundation.winmd" "/r:$wm\Windows.Storage.winmd" `
     "/r:$fw\System.Runtime.WindowsRuntime.dll" "/r:$fw\System.Runtime.dll" "/r:$fw\System.Runtime.InteropServices.WindowsRuntime.dll" `
-    (Join-Path $root 'src\AirPods.cs') (Join-Path $PSScriptRoot 'AirPodsScan.cs')
+    (Join-Path $root 'src\Features\AirPods\AirPodsMonitor.cs') (Join-Path $PSScriptRoot 'AirPodsScan.cs')
 if ($LASTEXITCODE -ne 0) { throw "編譯失敗 (exit $LASTEXITCODE)" }
 
 & $out $Seconds

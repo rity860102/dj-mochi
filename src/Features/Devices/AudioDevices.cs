@@ -1,4 +1,4 @@
-// Audio.cs — 音訊裝置資料與控制：讀取清單、顯示 / 隱藏、設為預設、重新命名、音量 / 靜音
+// AudioDevices.cs — 音訊裝置清單與控制：讀取、顯示 / 隱藏、設為預設、重新命名、音量 / 靜音
 
 using System;
 using System.Collections.Generic;
@@ -24,20 +24,6 @@ using Drawing = System.Drawing;
 
 namespace DJMochi
 {
-    // ===================== 資料 =====================
-
-    class Device
-    {
-        public int Flow;          // 0=播放 1=錄音
-        public string Desc;       // Windows 顯示的名稱（可改）
-        public string Dev;        // 硬體名稱
-        public bool Enabled;
-        public bool Unplugged;
-        public bool IsDefault;
-        public string Id;
-        public string Name { get { return string.IsNullOrEmpty(Dev) ? Desc : Desc + " (" + Dev + ")"; } }
-        public bool IsVirtual { get { return Dev != null && (Dev.Contains("Sonar") || Dev.Contains("Steam Streaming") || Dev.Contains("Virtual")); } }
-    }
 
     static class Audio
     {

@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/rity860102/dj-mochi)](https://github.com/rity860102/dj-mochi/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-<img src="src/icon/mochi.png" width="96" align="right" alt="DJ Mochi">
+<img src="src/Assets/mochi.png" width="96" align="right" alt="DJ Mochi">
 
 輕巧的 Windows 音訊裝置管理工具。把用不到的裝置藏起來、一鍵切換耳機和喇叭、個別調整音量，還能幫裝置取個好認的名字。
 

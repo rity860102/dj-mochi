@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/rity860102/dj-mochi)](https://github.com/rity860102/dj-mochi/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-<img src="src/icon/mochi.png" width="96" align="right" alt="DJ Mochi">
+<img src="src/Assets/mochi.png" width="96" align="right" alt="DJ Mochi">
 
 A lightweight audio device manager for Windows. Hide the devices you never use, switch between headphones and speakers in one click, adjust each device's volume, and give your devices names you can actually recognize.
 
