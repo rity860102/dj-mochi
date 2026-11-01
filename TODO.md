@@ -4,6 +4,12 @@ DJ Mochi 的待辦與想法清單。做完的項目打勾，並在後面註明�
 
 ## 🔜 下一步
 
+### 記住隱藏的裝置
+重新開機後，SteelSeries Sonar 會重新啟用自己的虛擬裝置、驅動更新會讓裝置以新 ID 出現，原本的隱藏設定因此失效。DJ Mochi 要記住使用者隱藏了哪些裝置，被重新啟用時自動再隱藏。
+
+- [ ] 依設計文件實作：[docs/sdd/persistent-hidden-devices/SDD.md](docs/sdd/persistent-hidden-devices/SDD.md)
+- [ ] 先決定 SDD §8 的待決定事項（互動方式、預設裝置被自動隱藏時的處理）
+
 ### Arctis Nova 7P 連線狀態與電量
 Arctis 透過 2.4 GHz 接收器連接，Windows 只看得到接收器，耳機關機時音訊裝置仍顯示「啟用中」，所以要直接問接收器。
 

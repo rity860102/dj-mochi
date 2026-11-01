@@ -52,3 +52,10 @@ pwsh -File tools\airpods-scan.ps1 -Seconds 30   # AirPods 廣播測試工具
 - 較大的變更先開分支開發，確認後再合併回 `main`
 - 不要提交 `DJMochi.exe`、`original-names.json`（含使用者的裝置 ID）、`src/Assets/preview.png`，已在 `.gitignore` 排除
 - 修改檔案結構、建置方式或使用方式時，同步更新 `docs/DEVELOPMENT.md` 與兩份 README（`README.md` 英文、`README.zh-TW.md` 繁體中文）
+
+## 設計文件（SDD）
+
+- **每個功能（feat）的 SDD 各自一個資料夾**：`docs/sdd/<功能名稱>/SDD.md`，功能名稱用小寫英文加連字號，例如 `docs/sdd/persistent-hidden-devices/`
+- 同一個功能的測試腳本、截圖、補充筆記也放在該資料夾
+- 開始實作某個功能前，先看 `TODO.md` 與對應的 SDD；SDD 裡「待決定事項」沒定案前，先跟使用者確認
+- 實作完成後，在 SDD 開頭的「狀態」改成「已完成（vX.Y.Z）」，並在 `TODO.md` 打勾

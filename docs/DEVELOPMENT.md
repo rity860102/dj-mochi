@@ -15,6 +15,9 @@ dj-mochi\
 │  └─ build.yml               CI / CD
 ├─ docs\
 │  ├─ DEVELOPMENT.md          本文件
+│  ├─ sdd\                    設計文件，每個功能一個資料夾（docs/sdd/<功能名稱>/SDD.md）
+│  │  └─ persistent-hidden-devices\
+│  │     └─ SDD.md            記住隱藏的裝置
 │  ├─ screenshot.png          中文介面截圖（README.zh-TW.md）
 │  └─ screenshot-en.png       英文介面截圖（README.md）
 ├─ build.ps1                  編譯腳本（編譯 src 底下所有 .cs）
