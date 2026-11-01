@@ -21,8 +21,9 @@ $info = Join-Path ([IO.Path]::GetTempPath()) ("DJMochi.AssemblyInfo.{0}.cs" -f [
 using System.Reflection;
 [assembly: AssemblyTitle("DJ Mochi")]
 [assembly: AssemblyProduct("DJ Mochi")]
-[assembly: AssemblyDescription("DJ Mochi - Windows 音訊裝置管理")]
-[assembly: AssemblyCopyright("Copyright (c) 2026 rity860102 - MIT License")]
+[assembly: AssemblyDescription("DJ Mochi - Windows audio device manager / Windows 音訊裝置管理")]
+[assembly: AssemblyCompany("Soxx")]
+[assembly: AssemblyCopyright("Copyright (c) 2026 Soxx - MIT License")]
 [assembly: AssemblyVersion("$numeric")]
 [assembly: AssemblyFileVersion("$numeric")]
 [assembly: AssemblyInformationalVersion("$Version")]
