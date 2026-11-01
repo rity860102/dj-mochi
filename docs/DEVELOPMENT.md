@@ -6,6 +6,7 @@
 dj-mochi\
 ├─ DJMochi.exe                主程式（編譯產生，不進 git）
 ├─ original-names.json        原始名稱備份（第一次改名時自動建立，不進 git）
+│                             記住的隱藏裝置存在 %APPDATA%\DJMochi\settings.json（不在專案資料夾）
 ├─ README.md                  英文說明（GitHub 首頁）
 ├─ README.zh-TW.md            繁體中文說明
 ├─ TODO.md                    待辦與想法清單
@@ -33,6 +34,9 @@ dj-mochi\
 │  │  │  ├─ AudioDevices.cs   裝置清單與控制（顯示 / 隱藏、預設、改名、音量）
 │  │  │  ├─ Device.cs         裝置資料
 │  │  │  └─ DeviceWatcher.cs  自動偵測裝置與音量變化
+│  │  ├─ HiddenDevices\       記住隱藏的裝置
+│  │  │  ├─ HiddenDevices.cs          settings.json 讀寫、比對、自動再隱藏、拉鋸保護
+│  │  │  └─ MainWindow.HiddenDevices.cs 檢查時機、狀態提示、預設裝置的確認通知
 │  │  ├─ AirPods\
 │  │  │  ├─ AirPodsMonitor.cs     BLE 廣播監聽與電量解析
 │  │  │  └─ MainWindow.AirPods.cs 監聽時機、篩選與電量顯示
@@ -154,6 +158,17 @@ Release 說明依 commit 紀錄自動產生，發布後可以在 GitHub 上手�
 
 **為什麼不用裝置管理員的「停用」？**
 `Disable-PnpDevice` 需要系統管理員權限，而且停用後音訊服務不一定會同步，Windows 的音效選單仍可能看得到。`SetEndpointVisibility` 才跟 Windows 設定的「不允許」完全一致。
+
+### 記住隱藏的裝置
+
+設計見 [docs/sdd/persistent-hidden-devices/SDD.md](sdd/persistent-hidden-devices/SDD.md)。
+
+- **設定檔**：`%APPDATA%\DJMochi\settings.json`，記錄每個隱藏裝置的 ID、方向、硬體名稱、原始名稱。第一次執行（或檔案損毀）時，以目前隱藏中的裝置建立初始清單；損毀的檔案會先複製成 `.bak`
+- **比對**：ID 相同；或「方向＋硬體名稱＋原始名稱」相同（原始名稱取自 `original-names.json`，改過名也能比對）。依名稱比對成功時把記錄的 ID 更新成新的
+- **檢查時機**：啟動時（包含 `--tray`，不依賴 `ContentRendered`）、裝置變化通知（0.4 秒合併後、重畫前）、從右下角叫回時
+- **外部打開的處理**：Windows 無法分辨是使用者還是其他程式打開的。啟動後 3 分鐘內（開機時 Sonar 可能比 DJ Mochi 晚啟動）一律再隱藏；之後看到「原本隱藏、現在被打開」，就把記錄標成 `releasedBy: "other"` 並記下時間，不再處理。在 DJ Mochi 按「顯示」則標成 `"user"`
+- **拉鋸保護**：同一裝置 60 秒內最多自動隱藏 3 次，超過就到下次啟動前都不處理它
+- **預設裝置**：不自動隱藏，改跳右下角通知（`BalloonTipClicked`），點了才隱藏；沒點就這次執行期間維持顯示。所有通知都經過 `ShowTip()`，換成別的通知時清掉待確認清單，避免點到別的通知卻隱藏了裝置
 
 ### AirPods 電量
 

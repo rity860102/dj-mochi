@@ -26,6 +26,7 @@ A lightweight audio device manager for Windows. Hide the devices you never use, 
 - **Set default**: switch the default output or input device in one click
 - **Volume / mute**: every device gets its own volume slider; scroll the mouse wheel for fine control
 - **Rename**: new names **also show up in the Windows sound menu**. The original name is backed up so you can restore it anytime
+- **Keeps hidden devices hidden**: DJ Mochi remembers what you hid. If another app (e.g. SteelSeries Sonar at startup) turns a device back on, or a driver update brings it back under a new ID, it's hidden again automatically. Turn this off from the notification area menu → "Keep hidden devices hidden"
 - **Updates automatically**: plug in headphones or change the volume elsewhere and DJ Mochi follows along, no refresh button needed
 
 ### 🎧 AirPods battery
@@ -80,11 +81,12 @@ A lightweight audio device manager for Windows. Hide the devices you never use, 
 ## FAQ
 
 **Are my settings kept?**
-Yes. Everything is written directly into Windows' own audio settings, so it survives restarts and you don't need to keep DJ Mochi running.
-Windows may reset a device in these cases; just open DJ Mochi and set it again:
-- Updating or reinstalling audio drivers
-- Plugging headphones or a receiver into a different USB port (Windows may treat it as a new device)
-- Major Windows updates
+Yes. Everything is written directly into Windows' own audio settings, so it survives restarts.
+Some apps and drivers bring hidden devices back (SteelSeries Sonar re-enables its virtual devices at startup; driver updates or a different USB port can create a "new" device). If DJ Mochi is set to start with Windows, it remembers what you hid and hides those devices again:
+- Devices are matched by ID first, then by name + hardware, so a device that comes back with a new ID is still recognised
+- During the first 3 minutes after DJ Mochi starts, anything that turns a remembered device back on is undone. After that, if a device is turned back on outside DJ Mochi (for example in Windows Settings), DJ Mochi takes that as your choice and stops hiding it
+- If a remembered device is the current default device, DJ Mochi doesn't hide it on its own. It shows a notification instead; click it to hide the device
+- The list is stored in `%APPDATA%\DJMochi\settings.json` on your PC only
 
 **My AirPods battery doesn't show up**
 - Make sure the AirPods are the **default playback device** and Bluetooth is on

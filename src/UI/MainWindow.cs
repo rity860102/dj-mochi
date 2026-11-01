@@ -143,6 +143,7 @@ namespace DJMochi
             ContentRendered += delegate { RefreshAll(); };
             InitTray();
             UpdateTrayText();   // 提示文字依語言設定
+            InitHiddenDevices();   // 記住隱藏的裝置：啟動時先檢查一次（需要 tray 才能跳確認通知）
             // AirPods 電量只在「使用中」監聽：視窗開著，且 AirPods 是預設播放裝置
             IsVisibleChanged += delegate { UpdatePodsListening(); };
             // 裝置、預設、名稱、音量有變化時自動更新（不需要手動重新整理）
@@ -356,6 +357,7 @@ namespace DJMochi
                     // 使用者正在改名或拖曳滑桿時先不要重畫，等操作完再更新
                     if (editBox != null || Mouse.LeftButton == MouseButtonState.Pressed) return;
                     deviceRefresh.Stop();
+                    EnforceHidden();   // 被其他程式重新打開的裝置先藏回去，再重畫
                     RefreshAll();
                 };
             }
@@ -619,6 +621,8 @@ namespace DJMochi
                     string def = Audio.GetDefault(d.Flow);
                     foreach (var x in cache[d.Flow]) x.IsDefault = def != null && string.Equals(x.Id, def, StringComparison.OrdinalIgnoreCase);
                 }
+                // 記住使用者的選擇：隱藏的會被自動維持隱藏，按「顯示」的就不再處理
+                if (d.Enabled) hiddenDevices.Forget(d); else hiddenDevices.Remember(d);
                 SetStatus(Lang.Tr(d.Enabled ? "st.shown" : "st.hidden", d.Name));
             }
             catch (Exception ex) { SetStatus(ex.Message); }

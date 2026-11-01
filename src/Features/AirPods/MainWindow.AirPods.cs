@@ -161,7 +161,7 @@ namespace DJMochi
             if (low <= PodsLowLevel && !podsLowWarned)
             {
                 podsLowWarned = true;
-                if (tray != null) tray.ShowBalloonTip(4000, Lang.Tr("pods.lowTitle"), s.ModelName + ": " + PodsSummary(s), WinForms.ToolTipIcon.Warning);
+                ShowTip(4000, Lang.Tr("pods.lowTitle"), s.ModelName + ": " + PodsSummary(s), WinForms.ToolTipIcon.Warning);
             }
             else if (low > PodsLowLevel + 10) podsLowWarned = false;   // 充回 20% 以上才重新提醒
         }

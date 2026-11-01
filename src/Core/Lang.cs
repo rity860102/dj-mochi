@@ -110,6 +110,12 @@ namespace DJMochi
             { "st.renamed",         new[] { "已重新命名：{0} → {1}", "Renamed: {0} → {1}" } },
             { "st.startupAdded",    new[] { "已加入開機自動啟動（工作管理員 →「啟動應用程式」）", "Added to startup apps (Task Manager → Startup apps)" } },
             { "st.startupRemoved",  new[] { "已取消開機自動啟動", "Removed from startup apps" } },
+            { "st.autoHidden",      new[] { "已自動隱藏：{0}", "Hidden again automatically: {0}" } },
+            { "st.autoHiddenMany",  new[] { "已自動隱藏：{0} 等 {1} 個裝置", "Hidden again automatically: {1} devices ({0}, …)" } },
+            { "st.autoHidePaused",  new[] { "「{0}」一直被其他程式重新開啟，這次先暫停自動隱藏", "\"{0}\" keeps being re-enabled by another app. Auto-hide paused for it until restart" } },
+            { "st.autoHideReleased",new[] { "「{0}」在 DJ Mochi 以外被重新開啟，之後不再自動隱藏", "\"{0}\" was shown outside DJ Mochi. It won't be hidden automatically anymore" } },
+            { "st.autoHideOn",      new[] { "已開啟自動維持隱藏", "Keeping hidden devices hidden" } },
+            { "st.autoHideOff",     new[] { "已關閉自動維持隱藏", "No longer keeping hidden devices hidden" } },
             { "st.language",        new[] { "介面語言：繁體中文", "Language: English" } },
 
             // 錯誤
@@ -125,6 +131,9 @@ namespace DJMochi
             { "tray.default",       new[] { "預設播放裝置", "Default playback device" } },
             { "tray.switched",      new[] { "已切換到：{0}", "Switched to: {0}" } },
             { "tray.startup",       new[] { "開機時自動啟動", "Start with Windows" } },
+            { "tray.autoHide",      new[] { "自動維持隱藏", "Keep hidden devices hidden" } },
+            { "tip.confirmDefaultTitle", new[] { "要隱藏預設裝置嗎？", "Hide the default device?" } },
+            { "tip.confirmDefault", new[] { "「{0}」被重新開啟了，但它是目前的預設裝置。點這裡隱藏它；不點就維持顯示", "\"{0}\" was re-enabled, but it's the current default device. Click here to hide it, or ignore to keep it visible" } },
             { "tray.language",      new[] { "語言 / Language", "Language / 語言" } },
             { "tray.exit",          new[] { "結束", "Exit" } },
             { "tray.minimized",     new[] { "縮小到右下角了，點圖示就能叫回來 🍡", "DJ Mochi is in the notification area. Click the icon to bring it back 🍡" } },
