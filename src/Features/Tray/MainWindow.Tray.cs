@@ -79,7 +79,7 @@ namespace DJMochi
                     {
                         foreach (var x in cache[0]) x.IsDefault = string.Equals(x.Id, dev.Id, StringComparison.OrdinalIgnoreCase);
                         if (IsVisible) Render();
-                        tray.ShowBalloonTip(1500, "DJ Mochi", Lang.Tr("tray.switched", dev.Desc), WinForms.ToolTipIcon.None);
+                        ShowTip(1500, "DJ Mochi", Lang.Tr("tray.switched", dev.Desc), WinForms.ToolTipIcon.None);
                     }
                 };
                 sub.DropDownItems.Add(item);
@@ -92,6 +92,11 @@ namespace DJMochi
             auto.Checked = Startup.IsEnabled();
             auto.Click += delegate { ToggleStartup(); };
             menu.Items.Add(auto);
+
+            var keep = new WinForms.ToolStripMenuItem(Lang.Tr("tray.autoHide"));
+            keep.Checked = hiddenDevices != null && hiddenDevices.AutoHide;
+            keep.Click += delegate { ToggleAutoHide(); };
+            menu.Items.Add(keep);
 
             // 語言：自動 / 繁體中文 / English（選了立刻生效）
             var lang = new WinForms.ToolStripMenuItem(Lang.Tr("tray.language"));
@@ -154,7 +159,7 @@ namespace DJMochi
             if (!trayTipShown && tray != null)
             {
                 trayTipShown = true;
-                tray.ShowBalloonTip(2500, "DJ Mochi", Lang.Tr("tray.minimized"), WinForms.ToolTipIcon.None);
+                ShowTip(2500, "DJ Mochi", Lang.Tr("tray.minimized"), WinForms.ToolTipIcon.None);
             }
         }
 
@@ -165,6 +170,7 @@ namespace DJMochi
             WindowState = restoreState;
             Activate();
             Topmost = true; Topmost = false;   // 確保跑到最前面
+            EnforceHidden();
             RefreshAll();                      // 縮小期間可能插拔過裝置
         }
     }

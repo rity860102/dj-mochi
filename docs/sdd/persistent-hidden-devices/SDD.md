@@ -2,7 +2,7 @@
 
 | 欄位 | 內容 |
 |---|---|
-| 狀態 | 設計完成，待實作 |
+| 狀態 | 已完成（v1.5.0） |
 | 日期 | 2026-11-01 |
 | 目標版本 | v1.5.0（`feat:`） |
 | 分支 | `feat/persistent-hidden`（建議） |
@@ -39,7 +39,7 @@ DJ Mochi 目前把設定直接寫進 Windows（`IPolicyConfig::SetEndpointVisibi
 2. SteelSeries GG 啟動後把 `Sonar - Chat` 重新打開 → DJ Mochi 收到裝置變化通知 → 自動再隱藏
 3. 音效驅動更新後，`喇叭 (Steam Streaming Speakers)` 以新的 ID 出現，名稱相同 → 依名稱比對成功 → 自動隱藏
 4. 使用者在 DJ Mochi 按「顯示」某個裝置 → 從記憶清單移除 → 之後不再自動隱藏它
-5. 使用者在 **Windows 設定**裡手動把某個記住的裝置改回「允許」→ DJ Mochi 會再把它藏回去（見 §8 待決定事項 2）
+5. 使用者在 **Windows 設定**裡手動把某個記住的裝置改回「允許」→ DJ Mochi 啟動 3 分鐘後，視為使用者的意思，不再自動隱藏，並記錄時間（見 §8 決定 2）
 
 ## 4. 設計
 
@@ -97,7 +97,7 @@ DJ Mochi 目前把設定直接寫進 Windows（`IPolicyConfig::SetEndpointVisibi
 
 ### 4.4 執行時機
 
-新增方法 `EnforceHiddenDevices()`（建議放在新檔 `src/Features/Devices/HiddenDevices.cs`，包含設定讀寫與比對；`MainWindow` 端只負責呼叫）：
+實作放在 `src/Features/HiddenDevices/`：`HiddenDevices.cs`（設定讀寫、比對、`Enforce`）與 `MainWindow.HiddenDevices.cs`（`EnforceHidden()` 呼叫時機與提示）：
 
 | 時機 | 做法 |
 |---|---|
@@ -193,6 +193,14 @@ DJ Mochi 目前把設定直接寫進 Windows（`IPolicyConfig::SetEndpointVisibi
 1. **互動方式**：全自動（建議）或每列加「📌 固定隱藏」開關？
 2. **使用者在 Windows 設定裡手動改回「允許」時**：DJ Mochi 無法分辨是使用者還是其他程式改的，目前設計會再隱藏回去。若使用者覺得困擾，可以用 §4.6 的右下角開關整個關掉。是否需要更細的處理？
 3. **自動隱藏的對象剛好是目前的預設裝置時**：照樣隱藏，還是跳過並提示？建議**跳過並提示**，避免突然沒聲音。
+
+### 決定（2026-11-01）
+
+1. **互動方式**：全自動。按「隱藏」記住、按「顯示」不再處理（記錄標為 `releasedBy: "user"` 與時間 `released`，保留紀錄）
+2. **在 DJ Mochi 以外被打開**：視為使用者的意思，**不再自動隱藏**，記錄標為 `releasedBy: "other"` 與時間
+   - 為了不讓開機時的 Sonar 被誤當成使用者：**啟動後 3 分鐘內**（`StartupGrace`）被打開的一律再隱藏，過了才套用此規則
+   - 判斷「被打開」= 這次執行期間曾看到它是隱藏的、現在變成可見。以新 ID 出現（驅動更新）的裝置不算，照樣隱藏
+3. **對象是預設裝置**：不自動隱藏，跳**右下角通知**，點通知才隱藏；沒點就這次執行期間維持顯示
 
 ## 9. 實作順序建議
 
